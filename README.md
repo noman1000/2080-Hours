@@ -51,7 +51,14 @@ Includes presets and customizability for rotating or fixed schedules and a paych
 Classic (old-school teal), Modern (follow system, light or dark) and Night Shift.
 
 ## Your data
-Everything is stored in your browser's local storage on the device you use. Nothing is sent anywhere. To move your setup to another browser or computer, use **Save / load → Save backup file** (or **Copy backup text**) and load it on the other side.
+**Where it's stored:** your schedule, edits, banks, pay settings and styles are saved automatically in your browser's **local storage**, under the key `shiftcal.v1`, as one JSON record. It stays on that device and in that browser only. There's no account, no server, no cookies and no tracking, and your data is never uploaded.
+
+**What that means in practice:**
+- Each browser and each address keeps its own copy. The GitHub site, a downloaded `index.html`, and a different browser or computer all start separately.
+- Clearing your browser's site data or cookies for the page deletes it, and private/incognito windows don't keep it after you close them.
+- To back up or move your setup, use **Save / load → Save backup file** (or **Copy backup text**), then **Load** it on the other side. The backup is the same JSON record in a plain text file.
+
+**Outside connections:** the app makes only two kinds of web requests. The page loads the IBM Plex fonts (used by the Modern and Night Shift looks) from Google Fonts. **Export → Image (PNG)** loads the html2canvas library from cdnjs the first time you use it. Neither one sends your schedule data.
 
 Pay figures are estimates. Tax rates are flat percentages you enter, not real withholding tables.
 
