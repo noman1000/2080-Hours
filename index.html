@@ -122,6 +122,7 @@ label.rad{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-wei
 .k-trn{background:var(--trn);color:var(--trnink);font-weight:700}
 .k-ot{background:var(--ot);color:var(--otink);font-weight:700}
 .k-swin{background:var(--swin);color:var(--swinink);font-weight:700}
+.k-vto{background:var(--off);color:var(--offink);font-weight:700;font-style:italic;background-image:repeating-linear-gradient(135deg,transparent 0 4px,rgb(0 0 0 / .08) 4px 6px)}
 .k-ft{background:var(--trn);color:var(--trnink);font-weight:700;font-style:italic;text-decoration:underline}
 .stub{font-family:var(--mono);background:var(--panel);border:var(--bw) solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);border-radius:var(--r);padding:12px 14px;max-width:680px;display:flex;flex-direction:column;gap:10px;font-variant-numeric:tabular-nums;overflow-x:auto}
 :root:not(.skin-classic) .stub{border-color:var(--line)}
@@ -459,7 +460,7 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
       <div id="dBank" class="row" hidden></div>
       <div id="dPoad" class="row" hidden><b>POAD (pay or a day):</b><select id="dPoadM" aria-label="POAD"><option value="">No</option><option value="full">Full — all OT hours</option><option value="partial">Partial</option></select><span id="dPoadPart"><input type="number" id="dPoadH" min="0" step="0.25" style="width:64px" aria-label="POAD hours"> h</span><span class="muted" id="dPoadNote"></span></div>
       <div class="form">
-        <label>Hours<input type="number" id="dHours" min="0" max="24" step="0.25"></label>
+        <label><span id="dHoursT">Hours</span><input type="number" id="dHours" min="0" max="24" step="0.25"></label>
         <label>Note<input type="text" id="dNote" placeholder="optional"></label>
       </div>
       <div class="row"><button class="btn primary" id="dSave">Save</button><button class="btn" id="dClear">Back to pattern</button><button class="btn" id="dCancel">Cancel</button></div>
@@ -499,6 +500,7 @@ const TYPES={
   swin:{label:'Swap in (work)',short:'SWAP',work:1},
   off:{label:'Swap out (off)',short:'OFF'},
   rdo:{label:'RDO (day off)',short:'RDO'},
+  vto:{label:'VTO (unpaid)',short:'VTO'},
   note:{label:'Note only',short:'NOTE'}
 };
 
@@ -617,7 +619,7 @@ const baseH=n=>S.pattern[mod(n-anchorN(),S.pattern.length)]||0;
 function info(n,useEdits){
   if(useEdits===undefined)useEdits=S.useEdits;
   const base=baseH(n),sched=base>0,hol=holName(n),prem=holPrem(n),o=useEdits?S.edits[toIso(n)]:null;
-  const r={n,base,sched,hol,prem,o,poad:0,bank:!!(o&&o.bank),kind:sched?'work':'rdo',work:sched?base:0,leave:0,ltype:null,ot:0,label:sched?'Work':'RDO'};
+  const r={n,base,sched,hol,prem,o,poad:0,vto:0,bank:!!(o&&o.bank),kind:sched?'work':'rdo',work:sched?base:0,leave:0,ltype:null,ot:0,label:sched?'Work':'RDO'};
   if(!o||o.t==='note'){
     if(sched&&hol&&S.holidays==='off'){r.kind='holoff';r.work=0;r.leave=base;r.ltype='hol';r.label='Holiday'}
     return r}
@@ -629,6 +631,7 @@ function info(n,useEdits){
   else if(o.t==='trn'){r.work=h??(base||S.hours)}
   else if(o.t==='swin'||o.t==='ft'){r.work=h??(base||S.hours)}
   else if(o.t==='off'||o.t==='rdo'){r.work=0}
+  else if(o.t==='vto'){const v=Math.min(base,h??base);r.vto=v;r.work=Math.max(0,base-v)}
   if(o.poad&&(o.t==='ot'||o.t==='trn')){const cap=r.work-Math.min(r.work,base);r.poad=o.poad==='full'?cap:Math.max(0,Math.min(cap,+o.poadH||0))}
   return r;
 }
@@ -637,8 +640,8 @@ function offRuns(a,b,isOff){const r={long:0,short:0,reg:0,longest:0};
     if(L>=S.longMin)r.long++;else if(L<=S.shortMax)r.short++;else r.reg++;if(L>r.longest)r.longest=L}
   return r}
 function totals(a,b,useEdits){
-  const t={paid:0,work:0,holWork:0,premWork:0,days:0,off:0,weOff:0,wkdayWork:0,ot:0,leave:{vac:0,pto:0,sick:0,hol:0,flt:0,comp:0},leaveDays:0};
-  for(let n=a;n<=b;n++){const i=info(n,useEdits);t.work+=i.work;t.ot+=i.ot;if(i.hol&&i.work>0){t.holWork+=i.work;if(i.prem)t.premWork+=i.work}
+  const t={vto:0,paid:0,work:0,holWork:0,premWork:0,days:0,off:0,weOff:0,wkdayWork:0,ot:0,leave:{vac:0,pto:0,sick:0,hol:0,flt:0,comp:0},leaveDays:0};
+  for(let n=a;n<=b;n++){const i=info(n,useEdits);t.work+=i.work;t.ot+=i.ot;t.vto+=i.vto||0;if(i.hol&&i.work>0){t.holWork+=i.work;if(i.prem)t.premWork+=i.work}
     if(i.ltype){t.leave[i.ltype]+=i.leave;if(i.leave>0)t.leaveDays++}
     t.paid+=i.work+i.leave;
     if(i.work>0){t.days++;const w=wd(n);if(w>0&&w<6)t.wkdayWork++}else{t.off++;const w=wd(n);if(w===0||w===6)t.weOff++}}
@@ -663,7 +666,7 @@ const awNames=n=>{const o=S.edits[toIso(n)];return o&&o.aw?o.aw.map(id=>(S.pay.a
 const bidEnd=n=>S.bids.filter(b=>fromIso(b.end)===n).map(b=>b.name).join(', ');
 function cellTitle(i){let s=`${fmtD(i.n)} · ${i.label}`;{const be=bidEnd(i.n);if(be)s+=` · Last day of bid: ${be}`;const an=awNames(i.n);if(an.length)s+=` · + ${an.join(', ')}`;if(i.bank)s+=' · Holiday banked';if(i.poad>0)s+=` · POAD ${fmtH(i.poad)} h`}if(S.ppLen){const p=ppStart(i.n);s+=` · ${ppLabel(p)}${p===i.n?' begins':''}`}if(isPayday(i.n))s+=' · PAYDAY';const h=i.work+i.leave;if(h)s+=` ${fmtH(h)} h`;if(i.hol)s+=` · ${i.hol}${i.prem?' (premium)':''}`;if(i.o&&i.o.n)s+=` · ${i.o.n}`;return s}
 function dayClasses(i,a,b){let c=`k-${i.kind}`;if(i.hol&&(i.kind==='work'||i.kind==='rdo'))c+=' holmark';if(i.n===TODAY)c+=' today';if(i.n<a||i.n>b)c+=' out';if(i.o&&i.o.n)c+=' note';if(isPayday(i.n))c+=' pay';if(bidEnd(i.n))c+=' bidend';if((i.o&&i.o.aw&&i.o.aw.length)||i.poad>0)c+=' aw';if(i.prem)c+=' prem';return c}
-function wkCell(s){let t=0;for(let n=s;n<s+7;n++){const i=info(n);t+=i.work+i.leave}return `<div class="wt" title="Hours paid in the pay week ${fmtD(s)} – ${fmtD(s+6)}, including days in the next or previous month"><span>WEEK HRS</span><b>${fmtH(t)}</b></div>`}
+function wkCell(s){let t=0;for(let n=s;n<s+7;n++){const i=info(n);t+=i.work+i.leave}return `<div class="wt" title="Hours paid in the pay week ${fmtD(s)} – ${fmtD(s+6)}, including days in the next or previous month"><span>WEEK HRS</span><b>${fmtH(t)} hr</b></div>`}
 function dowRow(){let h='';for(let i=0;i<7;i++)h+=`<div class="dow">${DOWS[(i+S.weekStart)%7]}</div>`;return h}
 function monthHours(y,m,a,b){let t=0;const f=dn(y,m,1),l=dn(y,m+1,0);for(let n=Math.max(f,a);n<=Math.min(l,b);n++){const i=info(n);t+=i.work+i.leave}return t}
 function mini(y,m,a,b){
@@ -677,7 +680,7 @@ function big(y,m){
   let h=`<section class="mon big"><h3><span>${MONTHS[m]} ${y}</span><b>HOURS:${fmtH(monthHours(y,m,f,l))}</b></h3><div class="mgrid${wk?' wk':''}">${dowRow()}${wk?'<div class="dow">Week</div>':''}`;
   for(let i=0;i<lead;i++)h+='<div></div>';
   for(let n=f;n<=l;n++){const i=info(n);const hrs=i.work+i.leave;
-    const tag=i.kind==='rdo'?'RDO':i.kind==='work'?`Work ${fmtH(i.work)}h`:`${(TYPES[i.kind]||{short:'HOL'}).short}${hrs?' '+fmtH(i.kind==='ot'?i.ot:hrs)+'h':''}`;
+    const tag=i.kind==='vto'?`VTO ${fmtH(i.vto)}h`:i.kind==='rdo'?'RDO':i.kind==='work'?`Work ${fmtH(i.work)}h`:`${(TYPES[i.kind]||{short:'HOL'}).short}${hrs?' '+fmtH(i.kind==='ot'?i.ot:hrs)+'h':''}`;
     h+=`<div class="bd ${dayClasses(i,f,l)}" data-d="${n}" tabindex="0" title="${esc(cellTitle(i))}"><div class="bn">${n-f+1}</div><div class="bt">${esc(tag)}</div>${i.hol?`<div class="bh">${i.prem?'★ ':''}${esc(i.hol)}${i.prem?' (premium)':''}</div>`:''}${isPayday(n)?'<div class="bpp">Payday</div>':''}${bidEnd(n)?`<div class="bh">${esc(bidEnd(n))} ends</div>`:''}${awNames(n).map(a=>`<div class="bnote">+ ${esc(a)}</div>`).join('')}${i.bank?'<div class="bnote">Holiday banked</div>':''}${i.poad>0?`<div class="bnote">POAD ${fmtH(i.poad)} h</div>`:''}${S.ppLen&&ppStart(n)===n?`<div class="bh">${ppLabel(n)} begins</div>`:''}${i.o&&i.o.n?`<div class="bnote">${esc(i.o.n)}</div>`:''}</div>`;
     if(wk&&mod(wd(n)-S.weekStart,7)===6)h+=wkCell(n-6)}
   if(wk){const p=mod(wd(l)-S.weekStart,7);if(p<6){for(let i=p;i<6;i++)h+='<div></div>';h+=wkCell(l-p)}}
@@ -695,14 +698,14 @@ function renderCal(){
   const lv=Object.values(t.leave).reduce((x,y)=>x+y,0);
   $('stats').innerHTML=[
     ['c-blue',fmtH(t.paid),'Paid hours'],['',fmtH(S.useEdits?t.work:t.paid),'Hours worked'],['',t.days,'Workdays'],['c-green',t.off,"Days off / RDO's"],
-    ['',t.wkdayWork,'Weekday workdays'],['c-green',t.weOff,'Weekend days off'],['',fmtH(lv),'Leave hours'],['',fmtH(t.ot),'Overtime hours'],
+    ['',t.wkdayWork,'Weekday workdays'],['c-green',t.weOff,'Weekend days off'],['',fmtH(lv),'Leave hours'],['',fmtH(t.ot),'Overtime hours'],...(t.vto>0?[['',fmtH(t.vto),'VTO hours (unpaid)']]:[]),
     ['',fmtH(t.paid/(span/7)),'Avg hours / week'],['c-green',fmtH(Math.round(t.off/span*1000)/10)+'%','Of days off'],...(S.pattern.length>7?[['c-green',t.runs.long,`Long weekends (${S.longMin}+ off)`],...(S.longMin-1>=S.shortMax+1?[['c-green',t.runs.reg,`Regular weekends (${S.shortMax+1===S.longMin-1?S.shortMax+1:(S.shortMax+1)+'–'+(S.longMin-1)} off)`]]:[]),['',t.runs.short,`Short weekends (≤${S.shortMax} off)`],['',t.runs.longest+' d','Longest stretch off']]:[]),...(S.showHol?[['',fmtH(t.holWork),'Holiday hours worked']]:[]),...(S.showHol&&S.showPrem?[['',fmtH(t.premWork),'Premium holiday hrs worked']]:[])
   ].map(([c,v,l])=>`<div class="stat"><b class="${c}">${v}</b><span>${l}</span></div>`).join('');
   $('ppDet').hidden=!S.ppLen;
   if(S.ppLen){let rows='',c=0;for(let s=ppStart(r.a);s<=r.b;s+=S.ppLen){const e=s+S.ppLen-1,x=totals(s,e),lv=Object.values(x.leave).reduce((p,q)=>p+q,0);c++;
       rows+=`<tr><td>${ppLabel(s)} · ${ymd(s).y}</td><td>${fmtD(s)} – ${fmtD(e)}</td><td>${fmtD(paydayOf(s))}</td><td>${x.days}</td><td>${fmtH(x.work)}</td><td>${fmtH(lv)}</td><td>${fmtH(x.ot)}</td><td><b>${fmtH(x.paid)}</b></td><td>${money(checkFor(s).net)}</td></tr>`}
     $('ppRows').innerHTML=rows;$('ppSum').textContent=`Pay periods in this view (${c})`}
-  $('legend').innerHTML=[['work','Workday'],['rdo','RDO / day off'],['holmark','Holiday'],['vac','Vacation'],['pto','PTO'],['sick','Sick'],['trn','Training'],['ot','Overtime'],['flt','Floating holiday'],['comp','Banked time off'],['ft','Field trip'],['swin','Swap in'],['off','Swap out']]
+  $('legend').innerHTML=[['work','Workday'],['rdo','RDO / day off'],['holmark','Holiday'],['vac','Vacation'],['pto','PTO'],['sick','Sick'],['trn','Training'],['ot','Overtime'],['flt','Floating holiday'],['comp','Banked time off'],['ft','Field trip'],['swin','Swap in'],['off','Swap out'],['vto','VTO (unpaid)']]
     .map(([k,l])=>`<span><i class="sw ${k==='holmark'?'k-hol':'k-'+k}" style="${k==='work'?'background:var(--panel)':''}"></i>${l}</span>`).join('')+'<span><i class="sw" style="background:linear-gradient(315deg,var(--aw) 0 6px,transparent 6px)"></i>Awarded pay / POAD</span><span>● = has a note</span><span>Outlined = today</span>'+'<span><i class="sw" style="background:linear-gradient(135deg,var(--pp) 45%,transparent 46%)"></i>Payday</span><span><i class="sw" style="border-right:3px solid var(--pw)"></i>Last day of a shift bid</span>'+(S.showHol&&S.showPrem?'<span><i class="sw k-hol" style="box-shadow:inset 0 0 0 2px var(--prem)"></i>Premium holiday</span>':'');
   $('printHead').innerHTML=`<h2 style="margin:0 0 4px;font-size:16px">${esc(S.name)} — ${esc(r.label)}</h2><div style="font-size:11px;margin-bottom:6px">Printed ${fmtD(TODAY)} · ${S.useEdits?'Actual schedule with leave and changes':'Pattern only (extrapolated)'}</div>`;
 }
@@ -822,7 +825,7 @@ function renderEdits(){renderBanks();
   $('leaveStats').innerHTML=[['vac','Vacation'],['pto','PTO'],['sick','Sick'],['hol','Holiday'],['flt','Floating holiday'],['comp','Banked time off']].map(([k,l])=>`<div class="stat"><b>${fmtH(t.leave[k])}</b><span>${l} hours</span></div>`).join('')+`<div class="stat"><b>${fmtH(t.ot)}</b><span>Overtime hours</span></div>`;
   const only=$('eYearOnly').checked;
   const rows=Object.keys(S.edits).sort().filter(k=>!only||k.startsWith(y+'-'));
-  $('eRows').innerHTML=rows.length?rows.map(k=>{const n=fromIso(k),i=info(n,true),o=S.edits[k];const hrs=i.kind==='ot'?i.ot:(i.work+i.leave);
+  $('eRows').innerHTML=rows.length?rows.map(k=>{const n=fromIso(k),i=info(n,true),o=S.edits[k];const hrs=i.kind==='ot'?i.ot:i.kind==='vto'?i.vto:(i.work+i.leave);
     return `<tr><td>${k}</td><td>${DOWS[wd(n)]}</td><td>${i.sched?`Work ${fmtH(i.base)}h`:'RDO'}</td><td><i class="sw k-${o.t==='note'?'work':o.t}"></i>${o.bank?'Holiday banked · ':''}${o.poad?'POAD · ':''}${esc(o.t==='note'&&(o.aw||o.bank)&&!o.n?(o.aw?'Awarded pay':''):(TYPES[o.t]||{}).label||o.t)}${awNames(n).length?' + '+esc(awNames(n).join(', ')):''}</td><td>${fmtH(hrs)}</td><td class="note">${esc(o.n||'')}</td><td><button class="btn" data-del="${k}">Remove</button></td></tr>`}).join('')
     :`<tr><td colspan="7" class="muted">No edits ${only?'in '+y:'yet'}. Use a brush on the Calendar tab or the range form above.</td></tr>`;
 }
@@ -966,6 +969,7 @@ function drawTypes(){
   const i=info(dlgN,false);let ph='';
   if(dlgT&&TYPES[dlgT]){const fake={...S.edits};}
   if(!dlgT||dlgT==='note'||dlgT==='off')ph='—';else if(TYPES[dlgT].leave)ph=fmtH(i.base);else if(dlgT==='ot')ph=fmtH(i.sched?2:S.hours);else ph=fmtH(i.base||S.hours);
+  $('dHoursT').textContent=dlgT==='vto'?'Hours off without pay (blank = whole shift)':dlgT==='ot'?'Extra hours':'Hours';if(dlgT==='vto')ph=fmtH(info(dlgN,false).base);
   $('dHours').placeholder=ph;$('dHours').disabled=!dlgT||dlgT==='note'||dlgT==='off';drawPoad()}
 function drawPoad(){const show=dlgT==='ot'||dlgT==='trn';$('dPoad').hidden=!show;if(!show)return;const m=$('dPoadM').value;$('dPoadPart').hidden=m!=='partial';
   const rb=S.banks.find(b=>b.poad&&b.on);$('dPoadNote').textContent=m?`POAD hours pay straight time and add the same hours to ${rb?rb.name:'a bank (pick one under Gets POAD on Time Off)'}.`:'Hours past your normal shift are paid by your OT rules.'}
@@ -1077,8 +1081,8 @@ const csvCell=v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/
 const toCsv=rows=>rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
 const slug=s=>s.replace(/[^\w-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
 function showCsv(rows,name){const txt=toCsv(rows);openExport('Export CSV',`${rows.length-1} rows. Opens in Excel, Google Sheets or Numbers.`,`<textarea readonly style="min-height:260px">${esc(txt)}</textarea>`,new Blob(['\ufeff'+txt],{type:'text/csv'}),name,txt)}
-$('csvDays').onclick=()=>{const r=range(),rows=[['Date','Day','Pattern','Pattern hours','Status','Hours worked','Leave type','Leave hours','OT hours','POAD hours','Holiday','Premium','Payday','Pay period','Awarded pay','Holiday banked','Note']];
-  for(let n=r.a;n<=r.b;n++){const i=info(n),o=i.o||{};rows.push([toIso(n),DOWS[wd(n)],i.sched?'Work':'RDO',i.base,i.label,i.work,i.ltype?TYPES[i.ltype].label:'',i.leave,i.ot,i.poad||0,i.hol,i.prem?'Yes':'',isPayday(n)?'Yes':'',S.ppLen?ppLabel(ppStart(n)):'',awNames(n).join('; '),i.bank?'Yes':'',o.n||''])}
+$('csvDays').onclick=()=>{const r=range(),rows=[['Date','Day','Pattern','Pattern hours','Status','Hours worked','Leave type','Leave hours','OT hours','VTO hours','POAD hours','Holiday','Premium','Payday','Pay period','Awarded pay','Holiday banked','Note']];
+  for(let n=r.a;n<=r.b;n++){const i=info(n),o=i.o||{};rows.push([toIso(n),DOWS[wd(n)],i.sched?'Work':'RDO',i.base,i.label,i.work,i.ltype?TYPES[i.ltype].label:'',i.leave,i.ot,i.vto||0,i.poad||0,i.hol,i.prem?'Yes':'',isPayday(n)?'Yes':'',S.ppLen?ppLabel(ppStart(n)):'',awNames(n).join('; '),i.bank?'Yes':'',o.n||''])}
   showCsv(rows,`${slug(S.name)}-${slug(r.label)}-days.csv`)};
 $('csvPP').onclick=()=>{const r=range(),rows=[['Pay period','Start','End','Payday','Workdays','Hours worked','Leave hours','OT hours','Hours above 1x','Gross','Deductions','Per diem','Net']];
   for(let s0=perStart(r.a);s0<=r.b;s0+=perLen()){const e=s0+perLen()-1,x=totals(s0,e),c=checkFor(s0);
