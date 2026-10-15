@@ -339,6 +339,7 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
       <label>Default shift length (hours)<input type="number" id="fHours" min="0" max="24" step="0.25"></label>
       <label>Cycle length (days)<span class="row"><input type="number" id="fLen" min="1" max="140"><button class="btn" id="setLen">Resize</button></span></label>
       <label>Federal holidays<select id="fHol"><option value="mark">Show, still a workday</option><option value="off">Paid day off</option></select></label>
+      <label>Weekend holidays fall on<select id="fHolObs"><option value="actual">The actual date (e.g. July 4)</option><option value="observed">The observed weekday (Sat → Fri, Sun → Mon)</option></select></label>
     </div></fieldset>
     <fieldset><legend>Pay week &amp; pay periods</legend><div class="form">
       <label>Pay week runs<select id="fPW"></select></label>
@@ -577,7 +578,7 @@ if(!Array.isArray(S.banks))S.banks=[{id:'vac',name:'Vacation',start:40,amt:6,per
   {id:'comp',name:'Holiday bank',start:0,amt:0,per:'year',max:'',use:['comp'],recv:true,poad:true}];
 S.banks.forEach(b=>{if(b.on==null)b.on=false});
 if(!S.banks.some(b=>b.poad)){const r=S.banks.find(b=>b.recv&&b.on);if(r)r.poad=true}
-if(!S.styles||typeof S.styles!=='object')S.styles={};if(!Array.isArray(S.brushOff))S.brushOff=[];if(!S.holidays)S.holidays='mark';
+if(!S.styles||typeof S.styles!=='object')S.styles={};if(!Array.isArray(S.brushOff))S.brushOff=[];if(!S.holidays)S.holidays='mark';if(!S.holObs)S.holObs='actual';
 if(S.longMin==null)S.longMin=4;if(S.shortMax==null)S.shortMax=2;if(S.payWeekStart==null)S.payWeekStart=1;S.weekStart=S.payWeekStart;if(S.payDow==null)S.payDow=5;if(!S.payWhen)S.payWhen='after';if(!Array.isArray(S.customHols))S.customHols=[];if(!Array.isArray(S.fedOff))S.fedOff=[];if(S.showHol==null)S.showHol=S.holidays!=='hide';if(S.holidays==='hide')S.holidays='mark';if(S.showPrem==null)S.showPrem=true;if(!Array.isArray(S.fedPrem))S.fedPrem=["New Year's Day",'Independence Day','Thanksgiving','Christmas Day'];if(S.ppLen==null)S.ppLen=14;if(!S.ppAnchor)S.ppAnchor='2026-01-05';
 const pwStart=n=>n-mod(wd(n)-S.payWeekStart,7);
 if(S.weekly==null)S.weekly=['r410','r58','f58','f410'].includes(S.preset)||/pay week\)$/.test(S.name||'')||/^Rotating (4\/10|5\/8)$/.test(S.name||'');
@@ -634,9 +635,10 @@ function save(){try{localStorage.setItem('shiftcal.v1',JSON.stringify(S))}catch(
 const holCache={};
 function nth(y,m,w,n){if(n>0){const f=dn(y,m,1);return f+mod(w-wd(f),7)+(n-1)*7}const l=dn(y,m+1,0);return l-mod(wd(l)-w,7)}
 const obs=n=>wd(n)===6?n-1:wd(n)===0?n+1:n;
-const FED=[["New Year's Day",y=>obs(dn(y,0,1))],['MLK Day',y=>nth(y,0,1,3)],["Presidents' Day",y=>nth(y,1,1,3)],['Memorial Day',y=>nth(y,4,1,-1)],
-  ['Juneteenth',y=>obs(dn(y,5,19))],['Independence Day',y=>obs(dn(y,6,4))],['Labor Day',y=>nth(y,8,1,1)],['Columbus Day',y=>nth(y,9,1,2)],
-  ['Veterans Day',y=>obs(dn(y,10,11))],['Thanksgiving',y=>nth(y,10,4,4)],['Christmas Day',y=>obs(dn(y,11,25))]];
+const fobs=n=>S.holObs==='observed'?obs(n):n;
+const FED=[["New Year's Day",y=>fobs(dn(y,0,1))],['MLK Day',y=>nth(y,0,1,3)],["Presidents' Day",y=>nth(y,1,1,3)],['Memorial Day',y=>nth(y,4,1,-1)],
+  ['Juneteenth',y=>fobs(dn(y,5,19))],['Independence Day',y=>fobs(dn(y,6,4))],['Labor Day',y=>nth(y,8,1,1)],['Columbus Day',y=>nth(y,9,1,2)],
+  ['Veterans Day',y=>fobs(dn(y,10,11))],['Thanksgiving',y=>nth(y,10,4,4)],['Christmas Day',y=>fobs(dn(y,11,25))]];
 function hols(y){if(holCache[y])return holCache[y];const h={};const add=(n,nm,pr)=>{const o=h[n];h[n]=o?{nm:o.nm+' / '+nm,pr:o.pr||pr}:{nm,pr}};
   FED.forEach(([nm,f])=>{if(!S.fedOff.includes(nm))add(f(y),nm,S.fedPrem.includes(nm))});
   S.customHols.forEach(c=>{const p=ymd(fromIso(c.date));if(!c.repeat&&p.y!==y)return;let n=dn(y,p.m,p.d);if(c.observe)n=obs(n);add(n,c.name,!!c.premium)});
@@ -783,7 +785,7 @@ function renderPattern(){
   $('fedList').innerHTML=FED.map(([nm,f])=>`<tr><td>${esc(nm)}</td><td>${fmtD(f(cy))}</td><td><input type="checkbox" data-fed="${esc(nm)}" aria-label="Use ${esc(nm)}" ${S.fedOff.includes(nm)?'':'checked'}></td><td><input type="checkbox" data-fedp="${esc(nm)}" aria-label="${esc(nm)} is premium" ${S.fedPrem.includes(nm)?'checked':''}></td></tr>`).join('');
   $('chRows').innerHTML=S.customHols.length?S.customHols.map((c,i)=>{const p=ymd(fromIso(c.date));
     return `<tr><td>${esc(c.name)}</td><td>${c.repeat?`Every ${MONTHS[p.m]} ${p.d}`:fmtD(fromIso(c.date))+' only'}</td><td>${c.observe?'Moves to Fri/Mon':'Stays on the date'}</td><td><input type="checkbox" data-chp="${i}" aria-label="Premium" ${c.premium?'checked':''}></td><td><button class="btn" data-chdel="${i}">Remove</button></td></tr>`}).join('')
-    :'<tr><td colspan="5" class="muted">None yet. Add one above.</td></tr>';if(!$('wDate').value)$('wDate').value=toIso(TODAY);$('fHol').value=S.holidays;
+    :'<tr><td colspan="5" class="muted">None yet. Add one above.</td></tr>';if(!$('wDate').value)$('wDate').value=toIso(TODAY);$('fHol').value=S.holidays;$('fHolObs').value=S.holObs;
   const len=S.pattern.length,a=anchorN(),cs=a+Math.floor((TODAY-a)/len)*len;
   const work=S.pattern.filter(h=>h>0).length,hrs=S.pattern.reduce((x,y)=>x+y,0);
   $('cycSummary').textContent=`${len}-day cycle · ${work} workdays, ${len-work} days off · ${fmtH(hrs)} h per cycle · avg ${fmtH(hrs/len*7)} h/week · about ${fmtH(Math.round(hrs/len*365))} h/year. Dates shown are the cycle that includes today.`;
@@ -1073,6 +1075,7 @@ $('chAdd').onclick=()=>{const nm=$('chName').value.trim(),d=$('chDate').value;if
   S.customHols.push({name:nm,date:d,repeat:$('chRepeat').checked,observe:$('chObs').checked,premium:$('chPrem').checked});$('chName').value='';$('chMsg').textContent=`Added ${nm}.`;render()};
 $('chRows').addEventListener('click',e=>{const b=e.target.closest('[data-chdel]');if(b){S.customHols.splice(+b.dataset.chdel,1);render()}});
 $('fHol').onchange=e=>{S.holidays=e.target.value;render()};
+$('fHolObs').onchange=e=>{S.holObs=e.target.value;render()};
 $('cyc').addEventListener('click',e=>{const b=e.target.closest('[data-cyc]');if(!b)return;const i=+b.dataset.cyc;S.pattern[i]=S.pattern[i]>0?0:S.hours;render()});
 $('cyc').addEventListener('change',e=>{const t=e.target.closest('[data-cych]');if(!t)return;const v=+t.value;if(v>0){S.pattern[+t.dataset.cych]=v;render()}});
 
