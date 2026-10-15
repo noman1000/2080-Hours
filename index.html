@@ -464,8 +464,8 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
 <div class="scrim" id="sScrim" hidden>
   <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="sTitle" style="width:min(820px,100%)">
     <div class="titlebar"><span class="ttl" id="sTitle">Day colors &amp; text</span><span class="sub"></span><div class="winbtns"><span id="sX" style="cursor:pointer" role="button" aria-label="Close">×</span></div></div>
-    <div class="body"><p class="muted">Change how each kind of day looks on the calendar, brushes and legend. Changes show right away and apply in every look.</p>
-      <div class="tablewrap" style="max-height:60vh"><table><thead><tr><th>Day type</th><th>Fill</th><th>Text</th><th>Bold</th><th>Italic</th><th>Line</th><th></th></tr></thead><tbody id="styRows"></tbody></table></div>
+    <div class="body"><p class="muted">Change how each kind of day looks on the calendar, brushes and legend, and untick Brush to hide brushes you don't use (the day menu still offers every type). Changes show right away and apply in every look.</p>
+      <div class="tablewrap" style="max-height:60vh"><table><thead><tr><th>Brush</th><th>Day type</th><th>Fill</th><th>Text</th><th>Bold</th><th>Italic</th><th>Line</th><th></th></tr></thead><tbody id="styRows"></tbody></table></div>
       <div class="row"><button class="btn" id="styResetAll">Reset all to defaults</button><button class="btn primary" id="styClose">Done</button></div></div>
   </div>
 </div>
@@ -577,7 +577,7 @@ if(!Array.isArray(S.banks))S.banks=[{id:'vac',name:'Vacation',start:40,amt:6,per
   {id:'comp',name:'Holiday bank',start:0,amt:0,per:'year',max:'',use:['comp'],recv:true,poad:true}];
 S.banks.forEach(b=>{if(b.on==null)b.on=false});
 if(!S.banks.some(b=>b.poad)){const r=S.banks.find(b=>b.recv&&b.on);if(r)r.poad=true}
-if(!S.styles||typeof S.styles!=='object')S.styles={};if(!S.holidays)S.holidays='mark';
+if(!S.styles||typeof S.styles!=='object')S.styles={};if(!Array.isArray(S.brushOff))S.brushOff=[];if(!S.holidays)S.holidays='mark';
 if(S.longMin==null)S.longMin=4;if(S.shortMax==null)S.shortMax=2;if(S.payWeekStart==null)S.payWeekStart=1;S.weekStart=S.payWeekStart;if(S.payDow==null)S.payDow=5;if(!S.payWhen)S.payWhen='after';if(!Array.isArray(S.customHols))S.customHols=[];if(!Array.isArray(S.fedOff))S.fedOff=[];if(S.showHol==null)S.showHol=S.holidays!=='hide';if(S.holidays==='hide')S.holidays='mark';if(S.showPrem==null)S.showPrem=true;if(!Array.isArray(S.fedPrem))S.fedPrem=["New Year's Day",'Independence Day','Thanksgiving','Christmas Day'];if(S.ppLen==null)S.ppLen=14;if(!S.ppAnchor)S.ppAnchor='2026-01-05';
 const pwStart=n=>n-mod(wd(n)-S.payWeekStart,7);
 function ppStart(n){const a=fromIso(S.ppAnchor),L=S.ppLen;return a+Math.floor((n-a)/L)*L}
@@ -749,7 +749,8 @@ function renderToolbar(){
   $(S.useEdits?'m-real':'m-ext').checked=true;
   {const L=S.pattern.length,d=mod(TODAY-anchorN(),L);$('cycLbl').textContent=`Today is day ${d+1} of ${L}`;$('cycLbl').title=`Day 1 of this cycle: ${fmtD(TODAY-d)}`}
   $('skin').value=S.skin;$('tHol').checked=S.showHol;$('tPrem').checked=S.showPrem;$('tPrem').disabled=!S.showHol;
-  const br=[['pick','Pick a day'],...Object.keys(TYPES).filter(k=>k!=='note').map(k=>[k,TYPES[k].label]),['clear','Erase edits']];
+  if(S.brushOff.includes(S.brush))S.brush='pick';
+  const br=[['pick','Pick a day'],...Object.keys(TYPES).filter(k=>k!=='note'&&!S.brushOff.includes(k)).map(k=>[k,TYPES[k].label]),['clear','Erase edits']];
   $('brushes').innerHTML=br.map(([k,l])=>`<button class="btn ${S.brush===k?'on':''}" data-brush="${k}">${k!=='pick'&&k!=='clear'?`<i class="sw k-${k}"></i>`:''}<span class="ts-${k}">${l}</span></button>`).join('');
   $('cal').classList.toggle('painting',S.brush!=='pick');
   $('schedName').textContent=`— ${S.name}`;
@@ -928,7 +929,7 @@ function applyUserStyles(){let css='';const st=S.styles||{};
 const hex=c=>{const m=c.match(/\d+(\.\d+)?/g);if(!m||(m.length>3&&+m[3]===0))return '#ffffff';return '#'+m.slice(0,3).map(x=>(+x|0).toString(16).padStart(2,'0')).join('')};
 function renderStyles(){const st=S.styles||{};
   $('styRows').innerHTML=STY().map(([k,l])=>{const pc=k==='holmark'?'k-work holmark':'k-'+k,e={...DEFTS[k],...(st[k]||{})};
-    return `<tr><td><span class="stylprev d ${pc}" data-probe="${k}">15</span>${esc(l)}</td>
+    return `<tr><td>${TYPES[k]?`<input type="checkbox" data-brushk="${k}" ${S.brushOff.includes(k)?'':'checked'} aria-label="Show the ${esc(l)} brush">`:'<span class="muted">—</span>'}</td><td><span class="stylprev d ${pc}" data-probe="${k}">15</span>${esc(l)}</td>
       <td><input type="color" data-sk="${k}" data-f="bg" aria-label="${esc(l)} fill"></td><td><input type="color" data-sk="${k}" data-f="fg" aria-label="${esc(l)} text color"></td>
       <td><input type="checkbox" data-sk="${k}" data-f="b" ${e.b?'checked':''} aria-label="Bold"></td><td><input type="checkbox" data-sk="${k}" data-f="i" ${e.i?'checked':''} aria-label="Italic"></td>
       <td><select data-sk="${k}" data-f="d" aria-label="Line">${LINES.map(([v,t])=>`<option value="${v}" ${e.d===v?'selected':''}>${t}</option>`).join('')}</select></td>
@@ -1149,12 +1150,12 @@ $('imgBtn').onclick=async()=>{const b=$('imgBtn');b.disabled=true;b.textContent=
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('xScrim').hidden)$('xScrim').hidden=true});
 $('styBtn').onclick=()=>{renderStyles();$('sScrim').hidden=false};
 $('styClose').onclick=$('sX').onclick=()=>{$('sScrim').hidden=true;render()};
-function styEdit(e){const t=e.target,k=t.dataset.sk;if(!k)return;const o=S.styles[k]||(S.styles[k]={}),f=t.dataset.f;
+function styEdit(e){const t=e.target;if(t.dataset.brushk){if(e.type==='change'){const k=t.dataset.brushk;S.brushOff=S.brushOff.filter(x=>x!==k);if(!t.checked)S.brushOff.push(k);save()}return}const k=t.dataset.sk;if(!k)return;const o=S.styles[k]||(S.styles[k]={}),f=t.dataset.f;
   o[f]=t.type==='checkbox'?(t.checked?1:0):t.value;applyUserStyles();save();
   const rb=t.closest('tr').lastElementChild;if(!rb.firstElementChild)rb.innerHTML=`<button class="btn" data-sreset="${k}">Default</button>`}
 $('styRows').addEventListener('input',styEdit);$('styRows').addEventListener('change',styEdit);
 $('styRows').addEventListener('click',e=>{const b=e.target.closest('[data-sreset]');if(b){delete S.styles[b.dataset.sreset];applyUserStyles();save();renderStyles()}});
-armed($('styResetAll'),()=>{S.styles={};applyUserStyles();save();renderStyles()});
+armed($('styResetAll'),()=>{S.styles={};S.brushOff=[];applyUserStyles();save();renderStyles()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('sScrim').hidden){$('sScrim').hidden=true;render()}});
 render();
 })();
