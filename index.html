@@ -295,7 +295,7 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
         <button class="btn" id="prev" aria-label="Previous">◀</button><span class="period" id="periodLbl"></span><button class="btn" id="next" aria-label="Next">▶</button><button class="btn" id="todayBtn">Today</button>
       </div></fieldset>
       <fieldset><legend>Cycle position</legend><div class="row">
-        <button class="btn" id="cycBack" title="Move the whole pattern one day earlier">◀ 1 day</button><span class="period" id="cycLbl"></span><button class="btn" id="cycFwd" title="Move the whole pattern one day later">1 day ▶</button><button class="btn" id="cycToday" title="Make today day 1 of the cycle">Today = day 1</button>
+        <button class="btn" id="cycBack" title="Move days off one day earlier (weekly rotations stay inside each pay week)">◀ 1 day</button><span class="period" id="cycLbl"></span><button class="btn" id="cycFwd" title="Move days off one day later (weekly rotations stay inside each pay week)">1 day ▶</button><button class="btn" id="cycToday" title="Make today day 1 of the cycle">Today = day 1</button>
       </div></fieldset>
       <fieldset id="yearOpts"><legend>Year runs</legend><div class="row">
         <select id="yearMode"><option value="cal">Jan 1 – Dec 31</option><option value="custom">From a start date</option></select>
@@ -554,7 +554,7 @@ function sampleState(){
     edits:{},
     view:'year',cursor:toIso(TODAY),useEdits:true,yearMode:'cal',yearStart:'2026-01-18',
     payWeekStart:1,ppLen:14,ppAnchor:'2026-01-05',
-    bids:[{name:'Fall–winter bid',start:'2026-10-04',end:'2027-01-02'}],bidIdx:0,skin:'modern',tab:'cal',brush:'pick',preset:'f58'};
+    bids:[{name:'Fall–winter bid',start:'2026-10-04',end:'2027-01-02'}],bidIdx:0,skin:'modern',tab:'cal',brush:'pick',preset:'f58',weekly:true};
 }
 let S;
 try{S=JSON.parse(localStorage.getItem('shiftcal.v1'))}catch(e){S=null}
@@ -580,6 +580,10 @@ if(!S.banks.some(b=>b.poad)){const r=S.banks.find(b=>b.recv&&b.on);if(r)r.poad=t
 if(!S.styles||typeof S.styles!=='object')S.styles={};if(!Array.isArray(S.brushOff))S.brushOff=[];if(!S.holidays)S.holidays='mark';
 if(S.longMin==null)S.longMin=4;if(S.shortMax==null)S.shortMax=2;if(S.payWeekStart==null)S.payWeekStart=1;S.weekStart=S.payWeekStart;if(S.payDow==null)S.payDow=5;if(!S.payWhen)S.payWhen='after';if(!Array.isArray(S.customHols))S.customHols=[];if(!Array.isArray(S.fedOff))S.fedOff=[];if(S.showHol==null)S.showHol=S.holidays!=='hide';if(S.holidays==='hide')S.holidays='mark';if(S.showPrem==null)S.showPrem=true;if(!Array.isArray(S.fedPrem))S.fedPrem=["New Year's Day",'Independence Day','Thanksgiving','Christmas Day'];if(S.ppLen==null)S.ppLen=14;if(!S.ppAnchor)S.ppAnchor='2026-01-05';
 const pwStart=n=>n-mod(wd(n)-S.payWeekStart,7);
+if(S.weekly==null)S.weekly=['r410','r58','f58','f410'].includes(S.preset)||/pay week\)$/.test(S.name||'')||/^Rotating (4\/10|5\/8)$/.test(S.name||'');
+function rotWeeks(d){const P=S.pattern,out=[];for(let w=0;w<P.length;w+=7)for(let j=0;j<7;j++)out.push(P[w+mod(j-d,7)]);S.pattern=out}
+function alignWeekly(){if(!S.weekly||S.pattern.length%7)return;const a=fromIso(S.anchor),d=mod(wd(a)-S.payWeekStart,7);if(!d)return;S.anchor=toIso(a-d);rotWeeks(d)}
+function shiftCycle(d){if(S.weekly&&S.pattern.length%7===0){alignWeekly();rotWeeks(d)}else S.anchor=toIso(fromIso(S.anchor)+d)}
 function ppStart(n){const a=fromIso(S.ppAnchor),L=S.ppLen;return a+Math.floor((n-a)/L)*L}
 function ppNum(s){const a=fromIso(S.ppAnchor),L=S.ppLen,y=ymd(s).y,f=a+Math.ceil((dn(y,0,1)-a)/L)*L;return (s-f)/L+1}
 const ppLabel=s=>`PP ${ppNum(s)}`;
@@ -747,7 +751,7 @@ function renderToolbar(){
   $('bidSel').innerHTML=S.bids.map((b,i)=>`<option value="${i}" ${i===S.bidIdx?'selected':''}>${esc(b.name)}</option>`).join('');
   const bd=S.bids[S.bidIdx]||S.bids[0];$('bidStart').value=bd.start;$('bidEnd').value=bd.end;
   $(S.useEdits?'m-real':'m-ext').checked=true;
-  {const L=S.pattern.length,d=mod(TODAY-anchorN(),L);$('cycLbl').textContent=`Today is day ${d+1} of ${L}`;$('cycLbl').title=`Day 1 of this cycle: ${fmtD(TODAY-d)}`}
+  {const L=S.pattern.length,d=mod(TODAY-anchorN(),L);$('cycLbl').textContent=S.weekly&&L>7&&L%7===0?`Today is week ${Math.floor(d/7)+1} of ${L/7} (day ${d+1} of ${L})`:`Today is day ${d+1} of ${L}`;$('cycLbl').title=`Day 1 of this cycle: ${fmtD(TODAY-d)}`}
   $('skin').value=S.skin;$('tHol').checked=S.showHol;$('tPrem').checked=S.showPrem;$('tPrem').disabled=!S.showHol;
   if(S.brushOff.includes(S.brush))S.brush='pick';
   const br=[['pick','Pick a day'],...Object.keys(TYPES).filter(k=>k!=='note'&&!S.brushOff.includes(k)).map(k=>[k,TYPES[k].label]),['clear','Erase edits']];
@@ -937,6 +941,7 @@ function renderStyles(){const st=S.styles||{};
   $('styRows').querySelectorAll('[data-probe]').forEach(p=>{const cs=getComputedStyle(p),k=p.dataset.probe,row=p.closest('tr');
     row.querySelector('[data-f="bg"]').value=st[k]&&st[k].bg||hex(cs.backgroundColor);row.querySelector('[data-f="fg"]').value=st[k]&&st[k].fg||hex(cs.color)})}
 function render(){
+  alignWeekly();
   for(const k in holCache)delete holCache[k];
   applySkin();applyUserStyles();
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===S.tab));
@@ -960,9 +965,9 @@ function step(dir){const c=fromIso(S.cursor),p=ymd(c);
   else{const bd=S.bids[S.bidIdx],a=fromIso(bd.start),b=fromIso(bd.end),len=b-a+1;bd.start=toIso(a+dir*len);bd.end=toIso(b+dir*len)}
   render()}
 $('prev').onclick=()=>step(-1);$('next').onclick=()=>step(1);
-$('cycBack').onclick=()=>{S.anchor=toIso(anchorN()-1);render()};
-$('cycFwd').onclick=()=>{S.anchor=toIso(anchorN()+1);render()};
-$('cycToday').onclick=()=>{S.anchor=toIso(TODAY);render()};
+$('cycBack').onclick=()=>{shiftCycle(-1);render()};
+$('cycFwd').onclick=()=>{shiftCycle(1);render()};
+$('cycToday').onclick=()=>{S.anchor=toIso(S.weekly?pwStart(TODAY):TODAY);render()};
 $('todayBtn').onclick=()=>{S.cursor=toIso(TODAY);render()};
 $('yearMode').onchange=e=>{S.yearMode=e.target.value;render()};
 $('yearStart').onchange=e=>{if(e.target.value){S.yearStart=e.target.value;S.cursor=e.target.value;render()}};
@@ -1040,19 +1045,19 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('scrim').hidden)
 
 /* ---------- pattern events ---------- */
 $('preset').onchange=e=>{$('presetNote').textContent=PRESETS[e.target.value].note};
-$('loadPreset').onclick=()=>{const k=$('preset').value,p=PRESETS[k];S.preset=k;S.name=p.name;S.anchor=(k==='r410'||k==='r58')?toIso(pwStart(TODAY)):p.anchor;S.hours=p.hours;S.pattern=p.pattern.slice();render()};
+$('loadPreset').onclick=()=>{const k=$('preset').value,p=PRESETS[k];S.preset=k;S.weekly=['r410','r58','f58','f410'].includes(k);S.name=p.name;S.anchor=(k==='r410'||k==='r58')?toIso(pwStart(TODAY)):p.anchor;S.hours=p.hours;S.pattern=p.pattern.slice();render()};
 $('fPW').onchange=e=>{S.payWeekStart=+e.target.value;S.weekStart=S.payWeekStart;render()};
 $('fPPLen').onchange=e=>{S.ppLen=+e.target.value;render()};
 $('fPPA').onchange=e=>{if(e.target.value){S.ppAnchor=e.target.value;render()}};
 $('wBuild').onclick=()=>{const off=Math.max(1,Math.min(6,Math.round(+$('wOff').value||3))),h=+$('wHours').value||S.hours,shift=+$('wShift').value;
   const start=pwStart(fromIso($('wDate').value||toIso(TODAY))),p0=mod(+$('wFirst').value-S.payWeekStart,7),weeks=shift===0?1:7,pt=[];
   for(let k=0;k<weeks;k++)for(let i=0;i<7;i++)pt.push(mod(i-(p0+k*shift),7)<off?0:h);
-  S.pattern=pt;S.anchor=toIso(start);S.hours=h;S.preset='';S.name=`Rotating ${7-off}/${fmtH(h)} (${DOWS[S.payWeekStart]}–${DOWS[(S.payWeekStart+6)%7]} pay week)`;
+  S.pattern=pt;S.anchor=toIso(start);S.hours=h;S.preset='';S.weekly=true;S.name=`Rotating ${7-off}/${fmtH(h)} (${DOWS[S.payWeekStart]}–${DOWS[(S.payWeekStart+6)%7]} pay week)`;
   $('wMsg').textContent=`Built a ${pt.length}-day cycle starting ${fmtD(start)}.`;render()};
 $('fName').oninput=e=>{S.name=e.target.value||'My schedule';$('schedName').textContent='— '+S.name;save()};
 $('fAnchor').onchange=e=>{if(e.target.value){S.anchor=e.target.value;render()}};
-$('aBack').onclick=()=>{S.anchor=toIso(anchorN()-1);render()};
-$('aFwd').onclick=()=>{S.anchor=toIso(anchorN()+1);render()};
+$('aBack').onclick=()=>{shiftCycle(-1);render()};
+$('aFwd').onclick=()=>{shiftCycle(1);render()};
 $('fHours').onchange=e=>{const v=+e.target.value;if(v>0){S.hours=v;render()}};
 $('setLen').onclick=()=>{const L=Math.max(1,Math.min(140,Math.round(+$('fLen').value||7)));
   if(L>S.pattern.length)S.pattern=S.pattern.concat(new Array(L-S.pattern.length).fill(0));else S.pattern=S.pattern.slice(0,L);render()};
