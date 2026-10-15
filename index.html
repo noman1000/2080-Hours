@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shift Calendar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one application window — title bar, tab strip, groupbox toolbar, calendar body, stat strip, status bar. */
+:root{
+  --desk:#e6eaee; --win:#f6f7f9; --panel:#ffffff; --ink:#1c2630; --dim:#66727e; --line:#d2d9df;
+  --hi:#d2d9df; --lo:#d2d9df; --bw:1px; --r:6px; --title1:#f6f7f9; --title2:#f6f7f9; --titleink:#1c2630;
+  --accent:#2a6f97; --accentink:#fff; --field:#fff; --btn:#eef1f4; --legend:#46525e; --statbox:#eef1f4; --statink:#1c2630;
+  --font:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --rdo:#cdeacf; --rdoink:#1d5a2c; --vac:#2f6db5; --vacink:#fff; --pto:#ec9a3a; --ptoink:#241400; --sick:#8a5cc2; --sickink:#fff;
+  --hol:#f4b7de; --holink:#5a1544; --trn:#bfe3ef; --trnink:#0c4454; --ot:#c8352e; --otink:#fff; --swin:#ffe7a1; --swinink:#5a4300;
+  --off:#d7dce1; --offink:#38424a; --today:#1c2630; --pick:#1c2630; --pw:#2a6f97; --pp:#c8352e; --prem:#9a6a00; --aw:#1f5fbf;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --desk:#0f1418; --win:#171e24; --panel:#1d252c; --ink:#e2e7eb; --dim:#8d99a4; --line:#2d3842; --hi:#2d3842; --lo:#2d3842;
+  --title1:#171e24; --title2:#171e24; --titleink:#e2e7eb; --accent:#5fa8d3; --accentink:#08141c; --field:#11171c; --btn:#232c34; --legend:#a3afba; --statbox:#232c34; --statink:#e2e7eb;
+  --rdo:#21452c; --rdoink:#bfe8c8; --vac:#3e7dc8; --vacink:#fff; --pto:#d98a2b; --ptoink:#1a0e00; --sick:#9a73d1; --sickink:#fff;
+  --hol:#743a62; --holink:#ffd6ef; --trn:#1d4a57; --trnink:#c6eef9; --ot:#d4483f; --otink:#fff; --swin:#5a4a17; --swinink:#ffe7a1;
+  --off:#2b333a; --offink:#b4bdc5; --today:#e2e7eb; --pick:#e2e7eb; --pw:#5fa8d3; --pp:#ff6b5e; --prem:#f2c14e; --aw:#6aa8ff; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --desk:#0f1418; --win:#171e24; --panel:#1d252c; --ink:#e2e7eb; --dim:#8d99a4; --line:#2d3842; --hi:#2d3842; --lo:#2d3842;
+  --title1:#171e24; --title2:#171e24; --titleink:#e2e7eb; --accent:#5fa8d3; --accentink:#08141c; --field:#11171c; --btn:#232c34; --legend:#a3afba; --statbox:#232c34; --statink:#e2e7eb;
+  --rdo:#21452c; --rdoink:#bfe8c8; --vac:#3e7dc8; --vacink:#fff; --pto:#d98a2b; --ptoink:#1a0e00; --sick:#9a73d1; --sickink:#fff;
+  --hol:#743a62; --holink:#ffd6ef; --trn:#1d4a57; --trnink:#c6eef9; --ot:#d4483f; --otink:#fff; --swin:#5a4a17; --swinink:#ffe7a1;
+  --off:#2b333a; --offink:#b4bdc5; --today:#e2e7eb; --pick:#e2e7eb; --pw:#5fa8d3; --pp:#ff6b5e; --prem:#f2c14e; --aw:#6aa8ff; color-scheme:dark }
+/* Classic skin: the 1990s scheduling-program look. Single fixed palette by design. */
+:root.skin-classic{
+  --desk:#008080; --win:#c0c0c0; --panel:#ffffc8; --ink:#000; --dim:#4a4a4a; --line:#808080; --hi:#ffffff; --lo:#404040; --bw:2px; --r:0px;
+  --title1:#000080; --title2:#1084d0; --titleink:#fff; --accent:#000080; --accentink:#fff; --field:#fff; --btn:#c0c0c0; --legend:#000080; --statbox:#ffffc8; --statink:#000;
+  --font:Tahoma,"MS Sans Serif",Verdana,Geneva,sans-serif; --mono:"Courier New",Courier,monospace;
+  --rdo:#70f07c; --rdoink:#000; --vac:#3366ff; --vacink:#fff; --pto:#ff9933; --ptoink:#000; --sick:#cc77ff; --sickink:#000;
+  --hol:#f28cf0; --holink:#000; --trn:#66ccff; --trnink:#000; --ot:#ff2a2a; --otink:#fff; --swin:#ffff00; --swinink:#000;
+  --off:#a8a8a8; --offink:#000; --today:#000; --pick:#000; --pw:#000080; --pp:#ff0000; --prem:#a06a00; --aw:#0000ff; color-scheme:light }
+:root.skin-night{
+  --desk:#07090c; --win:#12161b; --panel:#171c22; --ink:#e9e3d6; --dim:#9a927f; --line:#2b3138; --hi:#2b3138; --lo:#2b3138; --bw:1px; --r:4px;
+  --title1:#12161b; --title2:#12161b; --titleink:#f0b44a; --accent:#f0b44a; --accentink:#1a1205; --field:#0c0f12; --btn:#1f252c; --legend:#c9a15a; --statbox:#1f252c; --statink:#e9e3d6;
+  --rdo:#24432c; --rdoink:#c3ecca; --vac:#3a6fb8; --vacink:#fff; --pto:#c97a1f; --ptoink:#140b00; --sick:#8b66c2; --sickink:#fff;
+  --hol:#6c3359; --holink:#ffd6ef; --trn:#1c4450; --trnink:#c6eef9; --ot:#c9443b; --otink:#fff; --swin:#55461a; --swinink:#ffe7a1;
+  --off:#262c32; --offink:#b4bdc5; --today:#f0b44a; --pick:#f0b44a; --pw:#f0b44a; --pp:#ff6b5e; --prem:#f2c14e; --aw:#6aa8ff; color-scheme:dark }
+
+[hidden]{display:none!important}
+body.snap .noprint{display:none!important}
+body.snap .printonly{display:block}
+body.snap details:not([open]){display:none}
+#xBody img{max-width:100%;height:auto;border:1px solid var(--line)}
+:root.skin-light{
+  --desk:#e6eaee; --win:#f6f7f9; --panel:#ffffff; --ink:#1c2630; --dim:#66727e; --line:#d2d9df;
+  --hi:#d2d9df; --lo:#d2d9df; --bw:1px; --r:6px; --title1:#f6f7f9; --title2:#f6f7f9; --titleink:#1c2630;
+  --accent:#2a6f97; --accentink:#fff; --field:#fff; --btn:#eef1f4; --legend:#46525e; --statbox:#eef1f4; --statink:#1c2630;
+  --font:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --rdo:#cdeacf; --rdoink:#1d5a2c; --vac:#2f6db5; --vacink:#fff; --pto:#ec9a3a; --ptoink:#241400; --sick:#8a5cc2; --sickink:#fff;
+  --hol:#f4b7de; --holink:#5a1544; --trn:#bfe3ef; --trnink:#0c4454; --ot:#c8352e; --otink:#fff; --swin:#ffe7a1; --swinink:#5a4300;
+  --off:#d7dce1; --offink:#38424a; --today:#1c2630; --pick:#1c2630; --pw:#2a6f97; --pp:#c8352e; --prem:#9a6a00; --aw:#1f5fbf;; color-scheme:light}
+:root.skin-dark{
+  --desk:#0f1418; --win:#171e24; --panel:#1d252c; --ink:#e2e7eb; --dim:#8d99a4; --line:#2d3842; --hi:#2d3842; --lo:#2d3842;
+  --title1:#171e24; --title2:#171e24; --titleink:#e2e7eb; --accent:#5fa8d3; --accentink:#08141c; --field:#11171c; --btn:#232c34; --legend:#a3afba; --statbox:#232c34; --statink:#e2e7eb;
+  --rdo:#21452c; --rdoink:#bfe8c8; --vac:#3e7dc8; --vacink:#fff; --pto:#d98a2b; --ptoink:#1a0e00; --sick:#9a73d1; --sickink:#fff;
+  --hol:#743a62; --holink:#ffd6ef; --trn:#1d4a57; --trnink:#c6eef9; --ot:#d4483f; --otink:#fff; --swin:#5a4a17; --swinink:#ffe7a1;
+  --off:#2b333a; --offink:#b4bdc5; --today:#e2e7eb; --pick:#e2e7eb; --pw:#5fa8d3; --pp:#ff6b5e; --prem:#f2c14e; --aw:#6aa8ff; color-scheme:dark }
+:root:not(.skin-classic) .winbtns.deco{display:none}
+.form{align-items:end}
+*{box-sizing:border-box}
+body{background:var(--desk);color:var(--ink);font-family:var(--font);font-size:13px;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px}
+button,input,select,textarea{font:inherit;color:var(--ink)}
+.window{max-width:1280px;margin:0 auto;background:var(--win);border:var(--bw) solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);border-radius:var(--r);box-shadow:0 1px 0 var(--lo)}
+.titlebar{display:flex;align-items:center;gap:10px;padding:4px 6px 4px 10px;background:linear-gradient(90deg,var(--title1),var(--title2));color:var(--titleink);border-radius:var(--r) var(--r) 0 0;border-bottom:1px solid var(--line)}
+.titlebar .ttl{font-weight:700;letter-spacing:.02em}
+.titlebar .sub{opacity:.85;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.winbtns{display:flex;gap:2px}
+.winbtns span{width:18px;height:16px;background:var(--btn);border:var(--bw) solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);color:var(--ink);font:700 10px/12px var(--font);text-align:center;border-radius:calc(var(--r)/2)}
+.tabs{display:flex;gap:2px;padding:8px 8px 0;flex-wrap:wrap}
+.tab{background:var(--btn);border:var(--bw) solid;border-color:var(--hi) var(--lo) transparent var(--hi);border-radius:var(--r) var(--r) 0 0;padding:4px 14px;cursor:pointer;position:relative;top:var(--bw)}
+.tab[aria-selected="true"]{background:var(--win);font-weight:700;z-index:1;padding-top:6px;margin-top:-2px}
+.page{border-top:var(--bw) solid var(--hi);padding:10px;display:flex;flex-direction:column;gap:10px}
+fieldset{border:var(--bw) solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);border-radius:var(--r);margin:0;padding:6px 8px 8px;min-width:0}
+:root:not(.skin-classic) fieldset{border-color:var(--line)}
+legend{color:var(--legend);font-weight:700;padding:0 4px;font-size:12px;letter-spacing:.02em}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.btn{background:var(--btn);border:var(--bw) solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);border-radius:var(--r);padding:3px 10px;cursor:pointer;min-height:26px;white-space:nowrap}
+.btn:active,.btn.on{border-color:var(--lo) var(--hi) var(--hi) var(--lo)}
+.btn.on{background:var(--field);font-weight:700;box-shadow:inset 0 0 0 1px var(--pick)}
+.btn.primary{background:var(--accent);color:var(--accentink);font-weight:700}
+.btn.danger.armed{background:var(--ot);color:var(--otink)}
+.btn:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible,.d:focus-visible{outline:2px dotted var(--pick);outline-offset:1px}
+input[type=text],input[type=date],input[type=number],select,textarea{background:var(--field);border:var(--bw) solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);border-radius:var(--r);padding:3px 5px;min-height:26px}
+:root:not(.skin-classic) :is(input[type=text],input[type=date],input[type=number],select,textarea){border-color:var(--line)}
+input[type=number]{width:64px}
+#p-pay .form label>input[type=number]{width:100%;max-width:170px}
+#p-pay #pSalOtR{max-width:260px}
+label.rad{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-weight:700}
+.period{font-weight:700;min-width:150px;text-align:center;font-variant-numeric:tabular-nums}
+.brushes{display:flex;flex-wrap:wrap;gap:4px}
+.sw{display:inline-block;width:12px;height:12px;border:1px solid var(--line);vertical-align:-2px;margin-right:5px}
+.notice{background:var(--swin);color:var(--swinink);border:1px solid var(--line);padding:6px 10px;border-radius:var(--r)}
+
+/* calendar */
+#cal{touch-action:auto}
+#cal.painting .d,#cal.painting .bd{touch-action:none;cursor:crosshair}
+.grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.grid.q{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.mon{background:var(--panel);border:var(--bw) solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);border-radius:var(--r);padding:4px 6px 6px}
+:root:not(.skin-classic) .mon{border-color:var(--line)}
+.mon h3{margin:0 0 2px;font-size:14px;color:var(--legend);display:flex;justify-content:space-between;gap:8px;font-weight:700}
+.mon h3 b{font-variant-numeric:tabular-nums}
+.mgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-variant-numeric:tabular-nums}
+.dow{font-weight:700;text-align:center;font-size:12px;padding:1px 0}
+.d{text-align:center;font-weight:400;font-size:14px;line-height:22px;cursor:pointer;user-select:none;position:relative;border-radius:calc(var(--r)/2)}
+.d.k-work{color:var(--ink)}
+.k-rdo{background:var(--rdo);color:var(--rdoink);font-weight:700}
+.k-vac{background:var(--vac);color:var(--vacink);font-weight:700}
+.k-pto{background:var(--pto);color:var(--ptoink);font-weight:700}
+.k-sick{background:var(--sick);color:var(--sickink);font-weight:700}
+.k-hol,.k-holoff{background:var(--hol);color:var(--holink);font-weight:700}
+.k-trn{background:var(--trn);color:var(--trnink);font-weight:700}
+.k-ot{background:var(--ot);color:var(--otink);font-weight:700}
+.k-swin{background:var(--swin);color:var(--swinink);font-weight:700}
+.k-ft{background:var(--trn);color:var(--trnink);font-weight:700;font-style:italic;text-decoration:underline}
+.stub{font-family:var(--mono);background:var(--panel);border:var(--bw) solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);border-radius:var(--r);padding:12px 14px;max-width:680px;display:flex;flex-direction:column;gap:10px;font-variant-numeric:tabular-nums;overflow-x:auto}
+:root:not(.skin-classic) .stub{border-color:var(--line)}
+.stubhead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;border-bottom:2px solid var(--ink);padding-bottom:6px}
+.stub table{width:100%}
+.stub th,.stub td{padding:2px 6px;border-bottom:1px dotted var(--line);background:transparent;position:static}
+.stub td.n,.stub th.n{text-align:right}
+.stub tr.tot td{font-weight:700;border-top:1px solid var(--ink);border-bottom:0}
+.stubnet{display:flex;justify-content:space-between;align-items:baseline;border-top:2px solid var(--ink);padding-top:6px;font-weight:700}
+.stubnet b{font-size:22px}
+.paybox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums}
+.paybox .big{font-size:20px;font-weight:700}
+#chkRows tr{cursor:pointer}
+#chkRows tr.sel td{background:var(--btn);font-weight:700}
+#dedRows input[type=text]{width:100%;min-width:150px}
+.k-off{background:var(--off);color:var(--offink);font-weight:700;text-decoration:line-through}
+.d.holmark,.bd.holmark{background:var(--hol);color:var(--holink)}
+.d.holmark.k-rdo{background:var(--rdo);box-shadow:inset 0 -3px 0 var(--hol)}
+.d.prem,.bd.prem{box-shadow:inset 0 0 0 2px var(--prem)}
+.d.holmark.k-rdo.prem{box-shadow:inset 0 -3px 0 var(--hol),inset 0 0 0 2px var(--prem)}
+.d.today,.bd.today{outline:2px solid var(--today);outline-offset:-2px}
+.d.out,.bd.out{opacity:.32}
+.d.note::after{content:"";position:absolute;right:2px;top:2px;width:5px;height:5px;background:currentColor;border-radius:50%}
+.d.blank{cursor:default}
+.d.aw{background-image:linear-gradient(315deg,var(--aw) 0 7px,transparent 7px)}
+.bd.aw{background-image:linear-gradient(315deg,var(--aw) 0 11px,transparent 11px)}
+.k-flt{background:var(--hol);color:var(--holink);font-weight:700;font-style:italic}
+.k-comp{background:var(--pto);color:var(--ptoink);font-weight:700;font-style:italic}
+.banks{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;margin-top:10px}
+.bank{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.bank h4{margin:0;font-size:14px;color:var(--legend);display:flex;justify-content:space-between;gap:8px}
+.bank .kv{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:12px;font-variant-numeric:tabular-nums}
+.bank .kv b{font-size:13px}
+.bank svg{width:100%;height:auto;display:block}
+.bank .verdict{font-size:12px;font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:12px}
+.chips label{display:inline-flex;gap:3px;align-items:center;white-space:nowrap}
+.d.bidend,.bd.bidend{border-right:3px solid var(--pw)}
+.d.pay::before,.bd.pay::before{content:"";position:absolute;left:0;top:0;border-top:9px solid var(--pp);border-right:9px solid transparent}
+.big .mgrid.wk{grid-template-columns:repeat(7,minmax(0,1fr)) 58px}
+.wt{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;font-size:10px;font-weight:700;letter-spacing:.04em;border:1px dashed var(--line);border-radius:calc(var(--r)/2);font-variant-numeric:tabular-nums;color:var(--legend)}
+.wt b{font-size:15px;color:var(--ink)}
+.bpp{font-size:10px;font-weight:700;letter-spacing:.04em}
+.fedlist{display:flex;flex-wrap:wrap;gap:4px 16px}
+.fedlist label{font-weight:400}
+details summary{cursor:pointer;font-weight:700;color:var(--legend)}
+.ppwrap{margin-top:6px}
+/* big month */
+.big .mgrid{gap:3px}
+.bd{position:relative;min-height:84px;text-align:left;padding:4px 5px;cursor:pointer;user-select:none;border:1px solid var(--line);border-radius:calc(var(--r)/2);display:flex;flex-direction:column;gap:2px;min-width:0;overflow:hidden;background:var(--panel)}
+.bd.k-work{background:var(--panel)}
+.bn{font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
+.bt{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.bnote,.bh{font-size:11px;line-height:1.25;overflow-wrap:anywhere}
+.bh{font-style:italic}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px 12px}
+.stat{display:flex;align-items:center;gap:8px}
+.stat b{display:inline-block;min-width:66px;text-align:center;padding:2px 6px;font-size:16px;font-variant-numeric:tabular-nums;border:var(--bw) solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);background:var(--statbox);color:var(--statink)}
+.stat b.c-blue{background:var(--vac);color:var(--vacink)}
+.stat b.c-green{background:var(--rdo);color:var(--rdoink)}
+.stat span{font-weight:700}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px}
+/* pattern editor */
+.cyc{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;max-width:760px}
+.cc{border:1px solid var(--line);border-radius:calc(var(--r)/2);padding:4px;display:flex;flex-direction:column;gap:3px;align-items:stretch;background:var(--panel);min-width:0}
+.cc.w{background:var(--panel)}
+.cc.o{background:var(--rdo);color:var(--rdoink)}
+.cc .lbl{font-size:11px;display:flex;justify-content:space-between;gap:4px;font-variant-numeric:tabular-nums}
+.cc button{background:transparent;border:1px dashed var(--line);border-radius:calc(var(--r)/2);cursor:pointer;font-weight:700;padding:2px;color:inherit}
+.cc input{width:100%;height:24px;min-height:24px;padding:1px 3px}
+.cc input.hid{visibility:hidden}
+.cc button{height:26px}
+.cc.todaycell{outline:2px solid var(--today);outline-offset:-1px}
+.form{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px 14px}
+.form label{display:flex;flex-direction:column;gap:3px;font-weight:700;font-size:12px}
+.form label.inline{flex-direction:row;align-items:center;gap:6px}
+.tablewrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);max-height:420px;overflow-y:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.note{white-space:normal;min-width:160px}
+th{position:sticky;top:0;background:var(--btn)}
+.muted{color:var(--dim)}
+p{margin:0;max-width:70ch;line-height:1.45}
+textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
+.statusbar{display:flex;flex-wrap:wrap;gap:4px;padding:4px 6px}
+.statusbar div{border:1px solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);padding:2px 8px;font-size:12px;flex:1 1 auto;min-width:0}
+:root:not(.skin-classic) .statusbar div{border-color:var(--line);border-radius:var(--r)}
+/* modal */
+.scrim{position:fixed;inset:0;background:rgb(0 0 0 / .35);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.dlg{background:var(--win);border:var(--bw) solid;border-color:var(--hi) var(--lo) var(--lo) var(--hi);border-radius:var(--r);width:min(460px,100%);max-height:calc(100% - 20px);overflow:auto}
+.dlg .body{padding:12px;display:flex;flex-direction:column;gap:10px}
+.typegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:4px}
+.typegrid .btn{text-align:left}
+.printonly{display:none}
+@media (max-width:560px){
+  .bd{min-height:56px;padding:2px 3px}.bt{font-size:9px}.bnote,.bh{display:none}.bn{font-size:13px}
+  .cyc{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .big .mgrid.wk{grid-template-columns:repeat(7,minmax(0,1fr)) 38px}.wt span{display:none}.wt b{font-size:12px}
+  .period{min-width:0}
+}
+@media print{
+  @page{size:landscape;margin:9mm}
+  body{background:#fff;padding:0}
+  .noprint,.tabs,.titlebar,.statusbar,.scrim{display:none!important}
+  .window{border:0;box-shadow:none;background:#fff;max-width:none}
+  .page{border:0;padding:0}
+  .printonly{display:block}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .grid{grid-template-columns:repeat(4,1fr);gap:5px}
+  .grid.q{grid-template-columns:repeat(3,1fr)}
+  .d{line-height:15px;font-size:11px}
+  .page{gap:4px}
+  .mon{padding:2px 4px 3px}
+  .mon h3{font-size:12px}
+  .dow{font-size:10px;padding:0}
+  .grid{gap:4px}
+  fieldset{padding:3px 6px 4px}
+  legend{font-size:10px}
+  .stats{grid-template-columns:repeat(7,1fr);gap:3px 8px}
+  .stat{gap:5px;font-size:9px;line-height:1.15}
+  .stat b{min-width:40px;font-size:11px;padding:1px 4px}
+  details:not([open]){display:none}
+  .legend{font-size:9px;gap:2px 10px}
+  .sw{width:9px;height:9px}
+  #printHead h2{font-size:13px!important}
+  .bd{min-height:78px}
+  .mon{break-inside:avoid}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="window">
+  <div class="titlebar"><span class="ttl">Shift Calendar</span><span class="sub" id="schedName"></span><div class="winbtns deco" aria-hidden="true"><span>_</span><span>□</span><span>×</span></div></div>
+  <div class="tabs noprint" role="tablist">
+    <button class="tab" role="tab" data-tab="cal" id="t-cal">Calendar</button>
+    <button class="tab" role="tab" data-tab="pat" id="t-pat">Schedule pattern</button>
+    <button class="tab" role="tab" data-tab="edits" id="t-edits">Time Off</button>
+    <button class="tab" role="tab" data-tab="pay" id="t-pay">Paycheck</button>
+    <button class="tab" role="tab" data-tab="data" id="t-data">Save / load</button>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="page" id="p-cal">
+    <div class="toolbar noprint">
+      <fieldset><legend>View</legend><div class="row" id="viewRadios"></div></fieldset>
+      <fieldset><legend>Period</legend><div class="row">
+        <button class="btn" id="prev" aria-label="Previous">◀</button><span class="period" id="periodLbl"></span><button class="btn" id="next" aria-label="Next">▶</button><button class="btn" id="todayBtn">Today</button>
+      </div></fieldset>
+      <fieldset><legend>Cycle position</legend><div class="row">
+        <button class="btn" id="cycBack" title="Move the whole pattern one day earlier">◀ 1 day</button><span class="period" id="cycLbl"></span><button class="btn" id="cycFwd" title="Move the whole pattern one day later">1 day ▶</button><button class="btn" id="cycToday" title="Make today day 1 of the cycle">Today = day 1</button>
+      </div></fieldset>
+      <fieldset id="yearOpts"><legend>Year runs</legend><div class="row">
+        <select id="yearMode"><option value="cal">Jan 1 – Dec 31</option><option value="custom">From a start date</option></select>
+        <input type="date" id="yearStart">
+      </div></fieldset>
+      <fieldset id="bidOpts"><legend>Shift bid</legend><div class="row">
+        <select id="bidSel"></select>
+        <input type="date" id="bidStart" aria-label="Bid start"><span>to</span><input type="date" id="bidEnd" aria-label="Bid end">
+        <button class="btn" id="bidAdd">New</button><button class="btn" id="bidDel">Delete</button>
+      </div></fieldset>
+      <fieldset><legend>Show</legend><div class="row">
+        <label class="rad"><input type="radio" name="mode" value="1" id="m-real"> Actual</label>
+        <label class="rad"><input type="radio" name="mode" value="0" id="m-ext"> Pattern only</label>
+      </div></fieldset>
+      <fieldset><legend>Holidays</legend><div class="row">
+        <label class="rad"><input type="checkbox" id="tHol"> Holidays</label>
+        <label class="rad"><input type="checkbox" id="tPrem"> Premium</label>
+      </div></fieldset>
+      <fieldset><legend>Export</legend><div class="row"><button class="btn primary" id="printBtn">Print</button><button class="btn" id="imgBtn">Image (PNG)</button><button class="btn" id="csvDays">CSV — days</button><button class="btn" id="csvPP">CSV — pay periods</button></div></fieldset>
+      <fieldset><legend>Look</legend><div class="row"><select id="skin">
+        <option value="classic">Classic (teal)</option><option value="modern">Modern — follow system</option><option value="light">Modern — light</option><option value="dark">Modern — dark</option><option value="night">Night shift</option></select></div></fieldset>
+    </div>
+    <div class="notice noprint" id="printNote" hidden></div>
+    <fieldset class="noprint"><legend>Click a day to edit it, or pick a brush and click/drag across days</legend><div class="brushes" id="brushes"></div></fieldset>
+    <div class="printonly" id="printHead"></div>
+    <div id="cal"></div>
+    <fieldset><legend id="statsLegend">Totals</legend><div class="stats" id="stats"></div></fieldset>
+    <details id="ppDet"><summary id="ppSum">Pay periods in this view</summary><div class="tablewrap ppwrap"><table><thead><tr><th>Pay period</th><th>Dates</th><th>Payday</th><th>Workdays</th><th>Worked</th><th>Leave</th><th>OT</th><th>Paid</th><th>Est. net</th></tr></thead><tbody id="ppRows"></tbody></table></div></details>
+    <div class="legend" id="legend"></div>
+  </div>
+
+  <!-- PATTERN -->
+  <div class="page" id="p-pat" hidden>
+    <fieldset><legend>Start from a preset</legend><div class="row">
+      <select id="preset"></select><button class="btn primary" id="loadPreset">Load preset</button>
+      <span class="muted" id="presetNote"></span>
+    </div><p class="muted" style="margin-top:6px">Loading a preset replaces the repeating pattern only. Your vacation, PTO and other edits stay where they are.</p></fieldset>
+    <fieldset><legend>Schedule settings</legend><div class="form">
+      <label>Schedule name<input type="text" id="fName"></label>
+      <label>Cycle starts on (day 1)<span class="row"><input type="date" id="fAnchor"><button class="btn" id="aBack" title="Start one day earlier">−1 day</button><button class="btn" id="aFwd" title="Start one day later">+1 day</button></span></label>
+      <label>Default shift length (hours)<input type="number" id="fHours" min="0" max="24" step="0.25"></label>
+      <label>Cycle length (days)<span class="row"><input type="number" id="fLen" min="1" max="140"><button class="btn" id="setLen">Resize</button></span></label>
+      <label>Federal holidays<select id="fHol"><option value="mark">Show, still a workday</option><option value="off">Paid day off</option></select></label>
+    </div></fieldset>
+    <fieldset><legend>Pay week &amp; pay periods</legend><div class="form">
+      <label>Pay week runs<select id="fPW"></select></label>
+      <label>Pay periods<select id="fPPLen"><option value="14">Every 2 weeks</option><option value="7">Every week</option><option value="0">Don't show</option></select></label>
+      <label>A pay period starts on<input type="date" id="fPPA"></label>
+      <label>Payday<select id="fPayDow"></select></label>
+      <label>Paid on that day<select id="fPayWhen"><option value="after">after the pay period ends</option><option value="last">in the last week of the pay period</option></select></label>
+    </div><p class="muted" style="margin-top:6px">Calendar rows start on the first day of your pay week. A red corner flags each payday. Pay periods are numbered from the first one that starts in January, and Month view shows a total for each pay week.</p></fieldset>
+    <fieldset><legend>Holidays</legend>
+      <p class="muted" style="margin-bottom:8px">Premium holidays get a gold ring on the calendar, and the totals count hours worked on them separately. Turn holidays and premium flags on or off from the Calendar toolbar.</p>
+      <div class="tablewrap"><table><thead><tr><th>Federal holiday</th><th id="fedYr">Date</th><th>Use</th><th>Premium</th></tr></thead><tbody id="fedList"></tbody></table></div>
+      <div class="row" style="margin:10px 0 6px"><b>Your own holidays:</b></div>
+      <div class="form">
+        <label>Name<input type="text" id="chName" placeholder="e.g. Christmas Eve"></label>
+        <label>Date<input type="date" id="chDate"></label>
+        <label class="inline"><input type="checkbox" id="chRepeat" checked> Repeats every year</label>
+        <label class="inline"><input type="checkbox" id="chObs"> Move to Fri/Mon when it lands on a weekend</label>
+        <label class="inline"><input type="checkbox" id="chPrem"> Premium holiday</label>
+      </div>
+      <div class="row" style="margin:8px 0"><button class="btn primary" id="chAdd">Add holiday</button><span class="muted" id="chMsg"></span></div>
+      <div class="tablewrap"><table><thead><tr><th>Holiday</th><th>When</th><th>Weekend rule</th><th>Premium</th><th></th></tr></thead><tbody id="chRows"></tbody></table></div>
+    </fieldset>
+    <fieldset><legend>Weekly rotation builder — each pay week stands alone</legend><div class="form">
+      <label>Days off per week<input type="number" id="wOff" min="1" max="6" value="3"></label>
+      <label>Hours per workday<input type="number" id="wHours" min="1" max="24" step="0.25" value="10"></label>
+      <label>Pay week that is week 1 (any date in it)<input type="date" id="wDate"></label>
+      <label>In week 1, days off begin on<select id="wFirst"></select></label>
+      <label>Each new week, days off<select id="wShift"><option value="1">Move forward 1 day</option><option value="-1">Move back 1 day</option><option value="0">Stay the same</option></select></label>
+    </div><div class="row" style="margin-top:8px"><button class="btn primary" id="wBuild">Build rotation</button><span class="muted" id="wMsg"></span></div></fieldset>
+    <fieldset><legend>Repeating cycle — click a day to switch work/off, type to change hours</legend>
+      <p class="muted" id="cycSummary" style="margin-bottom:8px"></p>
+      <div class="cyc" id="cyc"></div>
+    </fieldset>
+    <fieldset><legend id="cmpLegend">Compare schedule types</legend>
+      <div class="row" style="margin-bottom:8px">
+        <label class="rad">Long weekend = <input type="number" id="lMin" min="3" max="14"> or more days off in a row</label>
+        <label class="rad">Short weekend = <input type="number" id="sMax" min="1" max="6"> or fewer</label>
+      </div>
+      <p class="muted" style="margin-bottom:8px">Pattern only, no leave or holidays. Weekend counts apply to rotating schedules; fixed weekly schedules repeat the same weekend every week.</p>
+      <div class="tablewrap"><table><thead><tr><th>Schedule</th><th>Cycle</th><th>Workdays</th><th>% of days off</th><th>Hours</th><th>Avg h/week</th><th>Long wknds</th><th>Short wknds</th><th>Longest off</th></tr></thead><tbody id="cmpRows"></tbody></table></div>
+    </fieldset>
+  </div>
+
+  <!-- EDITS -->
+  <div class="page" id="p-edits" hidden>
+    <fieldset><legend id="bankLegend">Leave banks</legend>
+      <p class="muted" style="margin-bottom:8px">Name each kind of time off you get, the balance you started the year with, how it builds up, and which day types use it. Two banks can share a day type (for example, one combined PTO bank used by both PTO and Sick days). The year follows the Year view setting on the Calendar tab. Balances use your actual edits.</p>
+      <div class="tablewrap"><table><thead><tr><th>On</th><th>Bank</th><th>Start of year (h)</th><th>Earns (h)</th><th>How often</th><th>Max (h)</th><th>Used by days marked</th><th>Gets banked holidays</th><th>Gets POAD</th><th></th></tr></thead><tbody id="bankRows"></tbody></table></div>
+      <div class="row" style="margin-top:8px"><button class="btn" id="bankAdd">Add bank</button></div>
+      <div class="banks" id="bankCards"></div>
+    </fieldset>
+    <fieldset><legend>Add leave or a change over a date range</legend><div class="form">
+      <label>From<input type="date" id="rFrom"></label>
+      <label>To<input type="date" id="rTo"></label>
+      <label>Type<select id="rType"></select></label>
+      <label>Hours per day<input type="number" id="rHours" min="0" max="24" step="0.25" placeholder="scheduled"></label>
+      <label>Note<input type="text" id="rNote" placeholder="e.g. Cancun trip"></label>
+      <label class="inline"><input type="checkbox" id="rOnlyWork" checked> Only on scheduled workdays</label>
+    </div><div class="row" style="margin-top:8px"><button class="btn primary" id="rApply">Apply to range</button><span class="muted" id="rMsg"></span></div></fieldset>
+    <fieldset><legend id="leaveLegend">Leave used</legend><div class="stats" id="leaveStats"></div></fieldset>
+    <fieldset><legend>All edits</legend>
+      <div class="row" style="margin-bottom:6px"><label class="rad"><input type="checkbox" id="eYearOnly" checked> Only this year</label><button class="btn danger" id="clearAll">Clear all edits</button></div>
+      <div class="tablewrap"><table><thead><tr><th>Date</th><th>Day</th><th>Pattern</th><th>Change</th><th>Hours</th><th>Note</th><th></th></tr></thead><tbody id="eRows"></tbody></table></div>
+    </fieldset>
+  </div>
+
+  <!-- PAY -->
+  <div class="page" id="p-pay" hidden>
+    <fieldset><legend>Pay basics</legend>
+      <div class="row" style="margin-bottom:8px"><label class="rad"><input type="checkbox" data-pk="salary" id="pSal"> I'm paid a salary</label></div>
+      <div class="form" id="hourlyBox">
+        <label>Hourly wage ($)<input type="number" data-pk="wage" id="pWage" min="0" step="0.01"></label>
+        <label class="inline"><input type="checkbox" data-pk="weekOt" id="pWk"> Pay straight-time hours over <input type="number" data-pk="weekOtAt" id="pWkAt" min="1" max="80" style="width:56px"> in a pay week at <input type="number" data-pk="weekOtRate" id="pWkR" min="1" step="0.05" style="width:62px">×</label>
+      </div>
+      <div class="form" id="salBox">
+        <label>Yearly gross salary ($)<input type="number" data-pk="annual" id="pAnnual" min="0" step="100"></label>
+        <label class="inline"><input type="checkbox" data-pk="salOt" id="pSalOt"> Salary includes paid overtime</label>
+        <label id="salOtRateL">Hourly rate for overtime ($)<input type="number" data-pk="salOtRate" id="pSalOtR" min="0" step="0.01"></label>
+      </div>
+      <p class="muted" style="margin-top:8px" id="payNote"></p></fieldset>
+    <fieldset><legend>Per diem — not taxed, added to net pay</legend><div class="form">
+      <label>Per hour worked ($)<input type="number" data-pk="pdHour" id="pPdH" min="0" step="0.01"></label>
+      <label>Per day worked ($)<input type="number" data-pk="pdDay" id="pPdD" min="0" step="0.01"></label>
+      <label>Paid on<select data-pk="pdWhen" id="pPdW"><option value="all">Every day worked</option><option value="ft">Field trip days only</option></select></label>
+    </div></fieldset>
+    <fieldset id="rulesBox"><legend>Overtime &amp; premium rules</legend>
+      <p class="muted" style="margin-bottom:8px">Every hour worked starts at 1× (straight time). Rules are checked from top to bottom for each hour. <b>At least</b> raises the rate if it's lower, <b>Add</b> stacks on top of the current rate, and <b>Set to</b> replaces it. Tick <b>Stop</b> to skip every rule below once this one applies. For example, a field trip set to 1.75× with Stop never gets double time.</p>
+      <div class="tablewrap"><table><thead><tr><th>On</th><th>Rule name</th><th>When</th><th>And also</th><th>Then</th><th>Rate</th><th>Stop</th><th>Order</th><th></th></tr></thead><tbody id="ruleRows"></tbody></table></div>
+      <div class="row" style="margin:8px 0"><button class="btn" id="ruleAdd">Add rule</button><button class="btn danger" id="ruleReset">Reset rules to defaults</button></div>
+      <div class="row" style="margin-bottom:4px"><b>What each kind of hour pays with these rules</b><span class="muted">(10 h normal shift)</span></div>
+      <div class="tablewrap"><table><thead><tr><th>Hour</th><th>Rate</th><th>Paid as</th><th>Per hour</th></tr></thead><tbody id="rateRows"></tbody></table></div>
+    </fieldset>
+    <fieldset><legend>Awarded pay — tick these on any day in the day menu</legend>
+      <div class="tablewrap"><table><thead><tr><th>Name</th><th>Hours</th><th>Rate</th><th>Pays</th><th></th></tr></thead><tbody id="awRows"></tbody></table></div>
+      <div class="row" style="margin-top:8px"><button class="btn" id="awAdd">Add awarded pay</button><span class="muted">Pays hours × rate × your hourly wage (or your OT hourly rate on salary), and is taxed like regular pay.</span></div>
+    </fieldset>
+    <fieldset><legend>Deductions per check — example values, replace with yours</legend>
+      <div class="tablewrap"><table><thead><tr><th>Deduction</th><th>Amount</th><th>Taken from</th><th>Pre-tax</th><th></th></tr></thead><tbody id="dedRows"></tbody></table></div>
+      <div class="row" style="margin-top:8px"><button class="btn" id="dedAdd">Add deduction</button><span class="muted">Pre-tax items come out before the "after pre-tax" percentages are figured. Tax rates are flat estimates, not real withholding tables.</span></div>
+    </fieldset>
+    <fieldset><legend>Pay stub</legend>
+      <div class="row" style="margin-bottom:8px"><label class="rad">Payday <select id="stubSel"></select></label><button class="btn" id="stubPrev">◀</button><button class="btn" id="stubNext">▶</button></div>
+      <div id="stub"></div>
+    </fieldset>
+    <fieldset><legend id="chkLegend">Checks this year</legend>
+      <div class="tablewrap"><table><thead><tr><th>Payday</th><th>Pay period</th><th>Hours</th><th>Hours above 1×</th><th>Gross</th><th>Deductions</th><th>Per diem</th><th>Net</th></tr></thead><tbody id="chkRows"></tbody></table></div>
+    </fieldset>
+  </div>
+
+  <!-- DATA -->
+  <div class="page" id="p-data" hidden>
+    <fieldset><legend>Where your data lives</legend><p>Everything is saved automatically in this browser on this computer. To move it to another computer or browser, or to keep a backup, save a backup file below and load it on the other side.</p></fieldset>
+    <fieldset><legend>Back up</legend><div class="row" style="margin-bottom:6px"><button class="btn primary" id="dlBtn">Save backup file</button><button class="btn" id="copyBtn">Copy backup text</button><span class="muted" id="dMsg"></span></div>
+      <textarea id="exportTxt" readonly aria-label="Backup text"></textarea></fieldset>
+    <fieldset><legend>Restore</legend><div class="row" style="margin-bottom:6px"><input type="file" id="fileIn" accept=".json,application/json"><button class="btn" id="pasteLoad">Load pasted text</button><span class="muted" id="iMsg"></span></div>
+      <textarea id="importTxt" placeholder="Paste backup text here" aria-label="Backup text to load"></textarea></fieldset>
+    <fieldset><legend>Start over</legend><div class="row"><button class="btn danger" id="resetBtn">Reset to the sample schedule</button></div></fieldset>
+  </div>
+
+  <div class="statusbar noprint"><div id="sToday"></div><div id="sNext"></div><div id="sPP"></div></div>
+</div>
+
+<div class="scrim" id="xScrim" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="xTitle" style="width:min(900px,100%)">
+    <div class="titlebar"><span class="ttl" id="xTitle">Export</span><span class="sub"></span><div class="winbtns"><span id="xX" style="cursor:pointer" role="button" aria-label="Close">×</span></div></div>
+    <div class="body"><p class="muted" id="xMsg"></p><div id="xBody" style="overflow:auto;max-height:60vh"></div>
+      <div class="row"><button class="btn primary" id="xSave">Save file</button><button class="btn" id="xCopy" hidden>Copy text</button><button class="btn" id="xClose">Close</button></div></div>
+  </div>
+</div>
+<div class="scrim" id="scrim" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+    <div class="titlebar"><span class="ttl" id="dTitle"></span><span class="sub"></span><div class="winbtns"><span id="dX" style="cursor:pointer" role="button" aria-label="Close">×</span></div></div>
+    <div class="body">
+      <div id="dPay" class="paybox" hidden></div>
+      <p id="dInfo" class="muted"></p>
+      <div class="typegrid" id="dTypes"></div>
+      <div id="dAw" class="row"></div>
+      <div id="dBank" class="row" hidden></div>
+      <div id="dPoad" class="row" hidden><b>POAD (pay or a day):</b><select id="dPoadM" aria-label="POAD"><option value="">No</option><option value="full">Full — all OT hours</option><option value="partial">Partial</option></select><span id="dPoadPart"><input type="number" id="dPoadH" min="0" step="0.25" style="width:64px" aria-label="POAD hours"> h</span><span class="muted" id="dPoadNote"></span></div>
+      <div class="form">
+        <label>Hours<input type="number" id="dHours" min="0" max="24" step="0.25"></label>
+        <label>Note<input type="text" id="dNote" placeholder="optional"></label>
+      </div>
+      <div class="row"><button class="btn primary" id="dSave">Save</button><button class="btn" id="dClear">Back to pattern</button><button class="btn" id="dCancel">Cancel</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const DAY=864e5, mod=(a,b)=>((a%b)+b)%b;
+const dn=(y,m,d)=>Math.round(Date.UTC(y,m,d)/DAY);
+const fromIso=s=>{const[a,b,c]=s.split('-').map(Number);return dn(a,b-1,c)};
+const toIso=n=>new Date(n*DAY).toISOString().slice(0,10);
+const ymd=n=>{const d=new Date(n*DAY);return{y:d.getUTCFullYear(),m:d.getUTCMonth(),d:d.getUTCDate()}};
+const wd=n=>mod(n+4,7);
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DOWS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const now=new Date(), TODAY=dn(now.getFullYear(),now.getMonth(),now.getDate());
+const fmtD=n=>{const p=ymd(n);return `${DOWS[wd(n)]} ${p.m+1}/${p.d}/${p.y}`};
+const fmtLong=n=>{const p=ymd(n);return `${["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][wd(n)]}, ${MONTHS[p.m]} ${p.d}, ${p.y}`};
+const fmtH=h=>{const r=Math.round(h*100)/100;return r.toLocaleString('en-US',{maximumFractionDigits:2})};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=id=>document.getElementById(id);
+
+/* ---------- edit types ---------- */
+const TYPES={
+  vac:{label:'Vacation',short:'VAC',leave:1},
+  pto:{label:'PTO',short:'PTO',leave:1},
+  sick:{label:'Sick',short:'SICK',leave:1},
+  hol:{label:'Holiday off',short:'HOL',leave:1},
+  flt:{label:'Floating holiday',short:'FLT',leave:1},
+  comp:{label:'Banked time off',short:'BANK',leave:1},
+  trn:{label:'Training',short:'TRN',work:1},
+  ot:{label:'Extra shift / OT',short:'OT',work:1},
+  ft:{label:'Field trip',short:'FT',work:1},
+  swin:{label:'Swap in (work)',short:'SWAP',work:1},
+  off:{label:'Swap out (off)',short:'OFF'},
+  note:{label:'Note only',short:'NOTE'}
+};
+
+/* ---------- presets ---------- */
+const pat=(s,h)=>s.replace(/\s/g,'').split('').map(c=>c==='W'?h:0);
+function rot410(){const a=[];for(let k=0;k<7;k++)for(let i=0;i<7;i++)a.push(mod(i-k,7)<3?0:10);return a}
+function rot58(){const w=["OOWWWWW","WOOWWWW","WWOOWWW","WWWOOWW","WWWWOOW","WWWWWOO","OWWWWWO"];return pat(w.join(''),8)}
+const PRESETS={
+  f58:{name:'5/8 straight days',label:'5/8 — Mon–Fri, 8 h',anchor:'2026-01-04',hours:8,pattern:pat("OWWWWWO",8),note:'7-day cycle'},
+  r58:{name:'Rotating 5/8',label:'Rotating 5/8 — days off move a day each week',anchor:'2026-01-04',hours:8,pattern:rot58(),note:'7-week cycle'},
+  f410:{name:'4/10 Mon–Thu',label:'4/10 — Mon–Thu, 10 h',anchor:'2026-01-04',hours:10,pattern:pat("OWWWWOO",10),note:'7-day cycle'},
+  r410:{name:'Rotating 4/10',label:'Rotating 4/10 — 3-day weekend moves a day each week',anchor:'2026-01-04',hours:10,pattern:rot410(),note:'7-week cycle'},
+  r95:{name:'Rotating 9.5',label:'Rotating 9.5 — 5 on / 3 off, 9.5 h',anchor:'2026-01-04',hours:9.5,pattern:pat("WWWWWOOO",9.5),note:'8-day cycle; adjust if yours differs'},
+  n80:{name:'9/80',label:'9/80 — every other Friday off',anchor:'2026-01-04',hours:9,pattern:[0,9,9,9,9,8,0,0,9,9,9,9,0,0],note:'2-week cycle'},
+  s77:{name:'7 on / 7 off',label:'7 on / 7 off, 12 h',anchor:'2026-01-05',hours:12,pattern:pat("WWWWWWWOOOOOOO",12),note:'2-week cycle'},
+  pit:{name:'Pitman 2-2-3',label:'Pitman 2-2-3, 12 h',anchor:'2026-01-05',hours:12,pattern:pat("WWOOWWWOOWWOOO",12),note:'2-week cycle'},
+  f44:{name:'4 on / 4 off',label:'4 on / 4 off, 12 h',anchor:'2026-01-05',hours:12,pattern:pat("WWWWOOOO",12),note:'8-day cycle'},
+  blank:{name:'Custom schedule',label:'Blank 14-day cycle (build your own)',anchor:'2026-01-04',hours:8,pattern:new Array(14).fill(0),note:'Click days to mark them as work'}
+};
+
+function sampleState(){
+  const p=PRESETS.f58;
+  return {v:1,name:p.name,anchor:p.anchor,hours:p.hours,pattern:p.pattern.slice(),weekStart:1,holidays:'mark',
+    edits:{},
+    view:'year',cursor:toIso(TODAY),useEdits:true,yearMode:'cal',yearStart:'2026-01-18',
+    payWeekStart:1,ppLen:14,ppAnchor:'2026-01-05',
+    bids:[{name:'Fall–winter bid',start:'2026-10-04',end:'2027-01-02'}],bidIdx:0,skin:'modern',tab:'cal',brush:'pick',preset:'f58'};
+}
+let S;
+try{S=JSON.parse(localStorage.getItem('shiftcal.v1'))}catch(e){S=null}
+if(!S||!Array.isArray(S.pattern)||!S.pattern.length)S=sampleState();
+S.edits=S.edits||{};S.bids=S.bids&&S.bids.length?S.bids:[{name:'Bid 1',start:toIso(TODAY),end:toIso(TODAY+90)}];
+if(S.preset==='mine'||S.name==='JFK_10HR'){const p=PRESETS.r410;S.name=p.name;S.hours=p.hours;S.pattern=p.pattern.slice();S.anchor=toIso(TODAY-mod(wd(TODAY)-1,7));S.preset='r410'}
+const RULEDEF=[{on:true,name:'Field trip',c1:'ft',c2:'none',eff:'set',rate:1.75,stop:true},
+  {on:true,name:'Swap (straight time)',c1:'swin',c2:'none',eff:'set',rate:1,stop:true},
+  {on:true,name:'Premium holiday overtime',c1:'prem',c2:'ot',eff:'set',rate:3,stop:true},
+  {on:true,name:'Overtime',c1:'ot',c2:'none',eff:'max',rate:1.5,stop:false},
+  {on:true,name:'Double time',c1:'past',n1:12,c2:'none',eff:'max',rate:2,stop:false},
+  {on:false,name:'Holiday worked',c1:'hol',c2:'none',eff:'max',rate:2,stop:false},
+  {on:false,name:'Premium holiday worked',c1:'prem',c2:'none',eff:'max',rate:2.5,stop:false}];
+const PAYDEF={awards:[{id:'lunch',name:'Paid lunch',hours:0.5,mult:1}],salary:false,annual:15080,salOt:false,salOtRate:0,pdHour:0,pdDay:0,pdWhen:'all',wage:7.25,weekOt:false,weekOtAt:40,weekOtRate:1.5,rules:RULEDEF,
+  deds:[{name:'401(k) / retirement',amt:5,type:'gross',pre:true},{name:'Health insurance',amt:100,type:'flat',pre:true},{name:'Federal income tax (est.)',amt:12,type:'taxable'},
+    {name:'Social Security',amt:6.2,type:'gross'},{name:'Medicare',amt:1.45,type:'gross'},{name:'State income tax (est.)',amt:5,type:'taxable'},{name:'City tax',amt:0,type:'taxable'}]};
+S.pay=Object.assign(JSON.parse(JSON.stringify(PAYDEF)),S.pay||{});
+if(!Array.isArray(S.banks))S.banks=[{id:'vac',name:'Vacation',start:40,amt:6,per:'pp',max:240,use:['vac']},{id:'sick',name:'Sick',start:0,amt:4,per:'pp',max:'',use:['sick']},
+  {id:'pto',name:'PTO',start:0,amt:0,per:'year',max:'',use:['pto']},{id:'flt',name:'Floating holiday',start:0,amt:10,per:'year',max:10,use:['flt']},
+  {id:'comp',name:'Holiday bank',start:0,amt:0,per:'year',max:'',use:['comp'],recv:true,poad:true}];
+S.banks.forEach(b=>{if(b.on==null)b.on=false});
+if(!S.banks.some(b=>b.poad)){const r=S.banks.find(b=>b.recv&&b.on);if(r)r.poad=true}
+if(S.longMin==null)S.longMin=4;if(S.shortMax==null)S.shortMax=2;if(S.payWeekStart==null)S.payWeekStart=1;S.weekStart=S.payWeekStart;if(S.payDow==null)S.payDow=5;if(!S.payWhen)S.payWhen='after';if(!Array.isArray(S.customHols))S.customHols=[];if(!Array.isArray(S.fedOff))S.fedOff=[];if(S.showHol==null)S.showHol=S.holidays!=='hide';if(S.holidays==='hide')S.holidays='mark';if(S.showPrem==null)S.showPrem=true;if(!Array.isArray(S.fedPrem))S.fedPrem=["New Year's Day",'Independence Day','Thanksgiving','Christmas Day'];if(S.ppLen==null)S.ppLen=14;if(!S.ppAnchor)S.ppAnchor='2026-01-05';
+const pwStart=n=>n-mod(wd(n)-S.payWeekStart,7);
+function ppStart(n){const a=fromIso(S.ppAnchor),L=S.ppLen;return a+Math.floor((n-a)/L)*L}
+function ppNum(s){const a=fromIso(S.ppAnchor),L=S.ppLen,y=ymd(s).y,f=a+Math.ceil((dn(y,0,1)-a)/L)*L;return (s-f)/L+1}
+const ppLabel=s=>`PP ${ppNum(s)}`;
+const payAfter=e=>e+1+mod(S.payDow-wd(e+1),7);
+const payLast=(s,L)=>{const w=s+L-7;return w+mod(S.payDow-wd(w),7)};
+const perStart=n=>S.ppLen?ppStart(n):pwStart(n);
+const perLen=()=>S.ppLen||7;
+const paydayOf=s=>S.payWhen==='last'?payLast(s,perLen()):payAfter(s+perLen()-1);
+const money=x=>(x<0?'−$':'$')+Math.abs(x).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+function periodForPayday(n){const L=perLen();if(S.payWhen==='last')return perStart(n);const s=perStart(n-1);return payAfter(s+L-1)===n?s:s-L}
+const CONDS={all:'Any hour worked',ot:'Past normal shift',past:'Past __ h in the day',ft:'Field trip',swin:'Swap in',trn:'Training',xs:'Extra shift / OT day',hol:'Any holiday',prem:'Premium holiday',sat:'Saturday',sun:'Sunday',wkend:'Weekend (Sat/Sun)'};
+function condOK(c,n,x){switch(c){case 'none':case 'all':return true;case 'ot':return x.a>=x.normal;case 'past':return x.a>=(+n||0);case 'ft':return x.kind==='ft';case 'swin':return x.kind==='swin';
+  case 'trn':return x.kind==='trn';case 'xs':return x.kind==='ot';case 'hol':return !!x.hol;case 'prem':return !!x.prem;case 'sat':return x.wd===6;case 'sun':return x.wd===0;case 'wkend':return x.wd===0||x.wd===6}return false}
+function rateAt(x){let m=1,lab='Regular';
+  for(const r of S.pay.rules){if(!r.on||!condOK(r.c1,r.n1,x)||!condOK(r.c2||'none',r.n2,x))continue;const R=+r.rate||0,old=m;
+    if(r.eff==='max')m=Math.max(m,R);else if(r.eff==='add')m+=R;else m=R;
+    if(m!==old||r.eff==='set')lab=r.name||'Rule';if(r.stop)break}
+  return{m:Math.round(m*10000)/10000,lab}}
+function addB(b,lab,m,h,amt){const k=lab+'|'+m,o=b[k]||(b[k]={lab,m,h:0,$:0});o.h+=h;o.$+=amt}
+const perYear=()=>Math.round(364/perLen());
+const salOtRate=()=>+S.pay.salOtRate>0?+S.pay.salOtRate:(+S.pay.annual||0)/2080;
+function dayPay(i,b){const P=S.pay,sal=P.salary,W=sal?salOtRate():+P.wage||0;if(!sal&&i.leave>0)addB(b,'Paid leave',1,i.leave,i.leave*W);
+  const w=i.work;if(w<=0||(sal&&!P.salOt))return 0;const normal=Math.min(w,i.base),he=holEntry(i.n,true);
+  const pz=i.poad||0,cuts=new Set([0,normal,w,Math.min(w,normal+pz)]);S.pay.rules.forEach(r=>{if(r.on){if(r.c1==='past')cuts.add(+r.n1||0);if(r.c2==='past')cuts.add(+r.n2||0)}});
+  const cs=[...cuts].filter(x=>x>=0&&x<=w).sort((a,b)=>a-b);let reg=0;
+  for(let k=0;k<cs.length-1;k++){const a=cs[k],len=cs[k+1]-a;if(len<=0)continue;
+    if(pz>0&&a>=normal&&a<normal+pz-1e-9){addB(b,'POAD (straight time)',1,len,len*W);continue}
+    const {m,lab}=rateAt({a,normal,kind:i.kind,hol:!!he&&!i.bank,prem:!!(he&&he.pr)&&!i.bank,wd:wd(i.n)});if(sal){const x=a>=normal?m:m-1;if(x>0.0001)addB(b,lab,m,len,len*W*x)}else{addB(b,lab,m,len,len*W*m);if(lab==='Regular'&&m===1)reg+=len}}
+  return reg}
+function checkFor(s){const P=S.pay,W=+P.wage||0,L=perLen(),e=s+L-1,b={};
+  const wk={};let hrs=0,pd=0;for(let n=s;n<=e;n++){const i=info(n,true),r=dayPay(i,b);
+    {const o=S.edits[toIso(n)],AW=P.salary?salOtRate():W;if(o&&o.aw)o.aw.forEach(id=>{const a=P.awards.find(x=>x.id===id);if(a){const h=+a.hours||0,m=+a.mult||0;addB(b,a.name,m,h,h*m*AW);hrs+=h}})}const k=pwStart(n);wk[k]=(wk[k]||0)+r;hrs+=i.work+i.leave;
+    if(i.work>0&&(P.pdWhen!=='ft'||i.kind==='ft'))pd+=(+P.pdDay||0)+(+P.pdHour||0)*i.work}
+  if(P.weekOt&&!P.salary)for(const k in wk){const ex=Math.max(0,wk[k]-(+P.weekOtAt||40));if(ex>0&&b['Regular|1']){const r=b['Regular|1'];r.h-=ex;r.$-=ex*W;addB(b,'Weekly overtime',+P.weekOtRate||1.5,ex,ex*W*(+P.weekOtRate||1.5))}}
+  const vals=Object.values(b),sal=P.salary?(+P.annual||0)/perYear():0;const gross=sal+vals.reduce((x,y)=>x+y.$,0),hours=hrs;
+  const deds=[];let pre=0;
+  P.deds.forEach(d=>{if(!d.pre)return;const a=d.type==='flat'?(+d.amt||0):gross*(+d.amt||0)/100;pre+=a;deds.push({name:d.name,amt:a,pre:true})});
+  const taxable=Math.max(0,gross-pre);
+  P.deds.forEach(d=>{if(d.pre)return;const a=d.type==='flat'?(+d.amt||0):(d.type==='gross'?gross:taxable)*(+d.amt||0)/100;deds.push({name:d.name,amt:a})});
+  const dt=deds.reduce((x,y)=>x+y.amt,0);
+  return{s,e,pd:paydayOf(s),b,gross,hours,deds,dt,taxable,sal,diem:pd,net:gross-dt+pd,ot:vals.filter(v=>v.m>1&&v.lab!=='Paid leave').reduce((x,y)=>x+y.h,0)}}
+function isPayday(n){if(wd(n)!==S.payDow)return false;
+  if(S.payWhen==='last')return payLast(perStart(n),perLen())===n;
+  const s=perStart(n-1);return payAfter(s-1)===n||payAfter(s+perLen()-1)===n}
+function save(){try{localStorage.setItem('shiftcal.v1',JSON.stringify(S))}catch(e){}}
+
+/* ---------- holidays ---------- */
+const holCache={};
+function nth(y,m,w,n){if(n>0){const f=dn(y,m,1);return f+mod(w-wd(f),7)+(n-1)*7}const l=dn(y,m+1,0);return l-mod(wd(l)-w,7)}
+const obs=n=>wd(n)===6?n-1:wd(n)===0?n+1:n;
+const FED=[["New Year's Day",y=>obs(dn(y,0,1))],['MLK Day',y=>nth(y,0,1,3)],["Presidents' Day",y=>nth(y,1,1,3)],['Memorial Day',y=>nth(y,4,1,-1)],
+  ['Juneteenth',y=>obs(dn(y,5,19))],['Independence Day',y=>obs(dn(y,6,4))],['Labor Day',y=>nth(y,8,1,1)],['Columbus Day',y=>nth(y,9,1,2)],
+  ['Veterans Day',y=>obs(dn(y,10,11))],['Thanksgiving',y=>nth(y,10,4,4)],['Christmas Day',y=>obs(dn(y,11,25))]];
+function hols(y){if(holCache[y])return holCache[y];const h={};const add=(n,nm,pr)=>{const o=h[n];h[n]=o?{nm:o.nm+' / '+nm,pr:o.pr||pr}:{nm,pr}};
+  FED.forEach(([nm,f])=>{if(!S.fedOff.includes(nm))add(f(y),nm,S.fedPrem.includes(nm))});
+  S.customHols.forEach(c=>{const p=ymd(fromIso(c.date));if(!c.repeat&&p.y!==y)return;let n=dn(y,p.m,p.d);if(c.observe)n=obs(n);add(n,c.name,!!c.premium)});
+  return holCache[y]=h}
+function holEntry(n,force){if(!S.showHol&&!force)return null;const y=ymd(n).y;return hols(y)[n]||hols(y+1)[n]||hols(y-1)[n]||null}
+function holName(n){const e=holEntry(n);return e?e.nm:''}
+function holPrem(n){const e=holEntry(n);return !!(e&&e.pr&&S.showPrem)}
+
+/* ---------- day computation ---------- */
+const anchorN=()=>fromIso(S.anchor);
+const baseH=n=>S.pattern[mod(n-anchorN(),S.pattern.length)]||0;
+function info(n,useEdits){
+  if(useEdits===undefined)useEdits=S.useEdits;
+  const base=baseH(n),sched=base>0,hol=holName(n),prem=holPrem(n),o=useEdits?S.edits[toIso(n)]:null;
+  const r={n,base,sched,hol,prem,o,poad:0,bank:!!(o&&o.bank),kind:sched?'work':'rdo',work:sched?base:0,leave:0,ltype:null,ot:0,label:sched?'Work':'RDO'};
+  if(!o||o.t==='note'){
+    if(sched&&hol&&S.holidays==='off'){r.kind='holoff';r.work=0;r.leave=base;r.ltype='hol';r.label='Holiday'}
+    return r}
+  const t=TYPES[o.t];if(!t)return r;
+  const h=o.h!=null&&o.h!==''?+o.h:null;
+  r.kind=o.t;r.label=t.label;
+  if(t.leave){r.work=0;r.leave=h??base;r.ltype=o.t}
+  else if(o.t==='ot'){const x=h??(sched?2:S.hours);r.ot=x;r.work=base+x}
+  else if(o.t==='trn'){r.work=h??(base||S.hours)}
+  else if(o.t==='swin'||o.t==='ft'){r.work=h??(base||S.hours)}
+  else if(o.t==='off'){r.work=0}
+  if(o.poad&&(o.t==='ot'||o.t==='trn')){const cap=r.work-Math.min(r.work,base);r.poad=o.poad==='full'?cap:Math.max(0,Math.min(cap,+o.poadH||0))}
+  return r;
+}
+function offRuns(a,b,isOff){const r={long:0,short:0,reg:0,longest:0};
+  for(let n=a;n<=b;n++){if(!isOff(n)||isOff(n-1))continue;let L=1;while(L<120&&isOff(n+L))L++;
+    if(L>=S.longMin)r.long++;else if(L<=S.shortMax)r.short++;else r.reg++;if(L>r.longest)r.longest=L}
+  return r}
+function totals(a,b,useEdits){
+  const t={paid:0,work:0,holWork:0,premWork:0,days:0,off:0,weOff:0,wkdayWork:0,ot:0,leave:{vac:0,pto:0,sick:0,hol:0,flt:0,comp:0},leaveDays:0};
+  for(let n=a;n<=b;n++){const i=info(n,useEdits);t.work+=i.work;t.ot+=i.ot;if(i.hol&&i.work>0){t.holWork+=i.work;if(i.prem)t.premWork+=i.work}
+    if(i.ltype){t.leave[i.ltype]+=i.leave;if(i.leave>0)t.leaveDays++}
+    t.paid+=i.work+i.leave;
+    if(i.work>0){t.days++;const w=wd(n);if(w>0&&w<6)t.wkdayWork++}else{t.off++;const w=wd(n);if(w===0||w===6)t.weOff++}}
+  t.runs=offRuns(a,b,n=>info(n,useEdits).work===0);t.span=b-a+1;
+  return t}
+
+/* ---------- view range ---------- */
+function range(){
+  const c=fromIso(S.cursor),p=ymd(c);
+  if(S.view==='month')return{a:dn(p.y,p.m,1),b:dn(p.y,p.m+1,0),label:`${MONTHS[p.m]} ${p.y}`};
+  if(S.view==='quarter'){const q=Math.floor(p.m/3);return{a:dn(p.y,q*3,1),b:dn(p.y,q*3+3,0),label:`Q${q+1} ${p.y} (${MONTHS[q*3].slice(0,3)}–${MONTHS[q*3+2].slice(0,3)})`}}
+  if(S.view==='year'){
+    if(S.yearMode==='custom'){const s=ymd(fromIso(S.yearStart));let a=dn(p.y,s.m,s.d);if(a>c)a=dn(p.y-1,s.m,s.d);const e=ymd(a);const b=dn(e.y+1,e.m,e.d)-1;
+      return{a,b,label:`${fmtD(a).slice(4)} – ${fmtD(b).slice(4)}`}}
+    return{a:dn(p.y,0,1),b:dn(p.y,11,31),label:`${p.y}`}}
+  const bd=S.bids[S.bidIdx]||S.bids[0];const a=fromIso(bd.start),b=Math.max(a,fromIso(bd.end));
+  return{a,b,label:bd.name}
+}
+
+/* ---------- render calendar ---------- */
+const awNames=n=>{const o=S.edits[toIso(n)];return o&&o.aw?o.aw.map(id=>(S.pay.awards.find(a=>a.id===id)||{}).name).filter(Boolean):[]};
+const bidEnd=n=>S.bids.filter(b=>fromIso(b.end)===n).map(b=>b.name).join(', ');
+function cellTitle(i){let s=`${fmtD(i.n)} · ${i.label}`;{const be=bidEnd(i.n);if(be)s+=` · Last day of bid: ${be}`;const an=awNames(i.n);if(an.length)s+=` · + ${an.join(', ')}`;if(i.bank)s+=' · Holiday banked';if(i.poad>0)s+=` · POAD ${fmtH(i.poad)} h`}if(S.ppLen){const p=ppStart(i.n);s+=` · ${ppLabel(p)}${p===i.n?' begins':''}`}if(isPayday(i.n))s+=' · PAYDAY';const h=i.work+i.leave;if(h)s+=` ${fmtH(h)} h`;if(i.hol)s+=` · ${i.hol}${i.prem?' (premium)':''}`;if(i.o&&i.o.n)s+=` · ${i.o.n}`;return s}
+function dayClasses(i,a,b){let c=`k-${i.kind}`;if(i.hol&&(i.kind==='work'||i.kind==='rdo'))c+=' holmark';if(i.n===TODAY)c+=' today';if(i.n<a||i.n>b)c+=' out';if(i.o&&i.o.n)c+=' note';if(isPayday(i.n))c+=' pay';if(bidEnd(i.n))c+=' bidend';if((i.o&&i.o.aw&&i.o.aw.length)||i.poad>0)c+=' aw';if(i.prem)c+=' prem';return c}
+function wkCell(s){let t=0;for(let n=s;n<s+7;n++){const i=info(n);t+=i.work+i.leave}return `<div class="wt" title="Pay week ${fmtD(s)} – ${fmtD(s+6)}"><span>PAY WK</span><b>${fmtH(t)}</b></div>`}
+function dowRow(){let h='';for(let i=0;i<7;i++)h+=`<div class="dow">${DOWS[(i+S.weekStart)%7]}</div>`;return h}
+function monthHours(y,m,a,b){let t=0;const f=dn(y,m,1),l=dn(y,m+1,0);for(let n=Math.max(f,a);n<=Math.min(l,b);n++){const i=info(n);t+=i.work+i.leave}return t}
+function mini(y,m,a,b){
+  const f=dn(y,m,1),l=dn(y,m+1,0),lead=mod(wd(f)-S.weekStart,7);
+  let h=`<section class="mon"><h3><span>${MONTHS[m]} ${y}</span><b>HOURS:${fmtH(monthHours(y,m,a,b))}</b></h3><div class="mgrid">${dowRow()}`;
+  for(let i=0;i<lead;i++)h+='<div class="d blank"></div>';
+  for(let n=f;n<=l;n++){const i=info(n);h+=`<div class="d ${dayClasses(i,a,b)}" data-d="${n}" tabindex="0" title="${esc(cellTitle(i))}">${n-f+1}</div>`}
+  return h+'</div></section>'}
+function big(y,m){
+  const f=dn(y,m,1),l=dn(y,m+1,0),lead=mod(wd(f)-S.weekStart,7),wk=S.weekStart===S.payWeekStart;
+  let h=`<section class="mon big"><h3><span>${MONTHS[m]} ${y}</span><b>HOURS:${fmtH(monthHours(y,m,f,l))}</b></h3><div class="mgrid${wk?' wk':''}">${dowRow()}${wk?'<div class="dow">Week</div>':''}`;
+  for(let i=0;i<lead;i++)h+='<div></div>';
+  for(let n=f;n<=l;n++){const i=info(n);const hrs=i.work+i.leave;
+    const tag=i.kind==='rdo'?'RDO':i.kind==='work'?`Work ${fmtH(i.work)}h`:`${(TYPES[i.kind]||{short:'HOL'}).short}${hrs?' '+fmtH(i.kind==='ot'?i.ot:hrs)+'h':''}`;
+    h+=`<div class="bd ${dayClasses(i,f,l)}" data-d="${n}" tabindex="0" title="${esc(cellTitle(i))}"><div class="bn">${n-f+1}</div><div class="bt">${esc(tag)}</div>${i.hol?`<div class="bh">${i.prem?'★ ':''}${esc(i.hol)}${i.prem?' (premium)':''}</div>`:''}${isPayday(n)?'<div class="bpp">Payday</div>':''}${bidEnd(n)?`<div class="bh">${esc(bidEnd(n))} ends</div>`:''}${awNames(n).map(a=>`<div class="bnote">+ ${esc(a)}</div>`).join('')}${i.bank?'<div class="bnote">Holiday banked</div>':''}${i.poad>0?`<div class="bnote">POAD ${fmtH(i.poad)} h</div>`:''}${S.ppLen&&ppStart(n)===n?`<div class="bh">${ppLabel(n)} begins</div>`:''}${i.o&&i.o.n?`<div class="bnote">${esc(i.o.n)}</div>`:''}</div>`;
+    if(wk&&mod(wd(n)-S.weekStart,7)===6)h+=wkCell(n-6)}
+  if(wk){const p=mod(wd(l)-S.weekStart,7);if(p<6){for(let i=p;i<6;i++)h+='<div></div>';h+=wkCell(l-p)}}
+  return h+'</div></section>'}
+function renderCal(){
+  const r=range();$('periodLbl').textContent=r.label;
+  let h='';
+  if(S.view==='month'){const p=ymd(r.a);h=big(p.y,p.m)}
+  else{const s=ymd(r.a),e=ymd(r.b);let y=s.y,m=s.m;h=`<div class="grid${S.view==='quarter'?' q':''}">`;
+    while(y<e.y||(y===e.y&&m<=e.m)){h+=mini(y,m,r.a,r.b);m++;if(m>11){m=0;y++}}h+='</div>'}
+  $('cal').innerHTML=h;
+  const t=totals(r.a,r.b);
+  const span=r.b-r.a+1;
+  $('statsLegend').textContent=`Totals · ${fmtD(r.a)} – ${fmtD(r.b)} · ${S.useEdits?'actual, with your edits':'pattern only'}`;
+  const lv=Object.values(t.leave).reduce((x,y)=>x+y,0);
+  $('stats').innerHTML=[
+    ['c-blue',fmtH(t.paid),'Paid hours'],['',fmtH(S.useEdits?t.work:t.paid),'Hours worked'],['',t.days,'Workdays'],['c-green',t.off,"Days off / RDO's"],
+    ['',t.wkdayWork,'Weekday workdays'],['c-green',t.weOff,'Weekend days off'],['',fmtH(lv),'Leave hours'],['',fmtH(t.ot),'Overtime hours'],
+    ['',fmtH(t.paid/(span/7)),'Avg hours / week'],['c-green',fmtH(Math.round(t.off/span*1000)/10)+'%','Of days off'],...(S.pattern.length>7?[['c-green',t.runs.long,`Long weekends (${S.longMin}+ off)`],...(S.longMin-1>=S.shortMax+1?[['c-green',t.runs.reg,`Regular weekends (${S.shortMax+1===S.longMin-1?S.shortMax+1:(S.shortMax+1)+'–'+(S.longMin-1)} off)`]]:[]),['',t.runs.short,`Short weekends (≤${S.shortMax} off)`],['',t.runs.longest+' d','Longest stretch off']]:[]),...(S.showHol?[['',fmtH(t.holWork),'Holiday hours worked']]:[]),...(S.showHol&&S.showPrem?[['',fmtH(t.premWork),'Premium holiday hrs worked']]:[])
+  ].map(([c,v,l])=>`<div class="stat"><b class="${c}">${v}</b><span>${l}</span></div>`).join('');
+  $('ppDet').hidden=!S.ppLen;
+  if(S.ppLen){let rows='',c=0;for(let s=ppStart(r.a);s<=r.b;s+=S.ppLen){const e=s+S.ppLen-1,x=totals(s,e),lv=Object.values(x.leave).reduce((p,q)=>p+q,0);c++;
+      rows+=`<tr><td>${ppLabel(s)} · ${ymd(s).y}</td><td>${fmtD(s)} – ${fmtD(e)}</td><td>${fmtD(paydayOf(s))}</td><td>${x.days}</td><td>${fmtH(x.work)}</td><td>${fmtH(lv)}</td><td>${fmtH(x.ot)}</td><td><b>${fmtH(x.paid)}</b></td><td>${money(checkFor(s).net)}</td></tr>`}
+    $('ppRows').innerHTML=rows;$('ppSum').textContent=`Pay periods in this view (${c})`}
+  $('legend').innerHTML=[['work','Workday'],['rdo','RDO / day off'],['holmark','Holiday'],['vac','Vacation'],['pto','PTO'],['sick','Sick'],['trn','Training'],['ot','Overtime'],['flt','Floating holiday'],['comp','Banked time off'],['ft','Field trip'],['swin','Swap in'],['off','Swap out']]
+    .map(([k,l])=>`<span><i class="sw ${k==='holmark'?'k-hol':'k-'+k}" style="${k==='work'?'background:var(--panel)':''}"></i>${l}</span>`).join('')+'<span><i class="sw" style="background:linear-gradient(315deg,var(--aw) 0 6px,transparent 6px)"></i>Awarded pay / POAD</span><span>● = has a note</span><span>Outlined = today</span>'+'<span><i class="sw" style="background:linear-gradient(135deg,var(--pp) 45%,transparent 46%)"></i>Payday</span><span><i class="sw" style="border-right:3px solid var(--pw)"></i>Last day of a shift bid</span>'+(S.showHol&&S.showPrem?'<span><i class="sw k-hol" style="box-shadow:inset 0 0 0 2px var(--prem)"></i>Premium holiday</span>':'');
+  $('printHead').innerHTML=`<h2 style="margin:0 0 4px;font-size:16px">${esc(S.name)} — ${esc(r.label)}</h2><div style="font-size:11px;margin-bottom:6px">Printed ${fmtD(TODAY)} · ${S.useEdits?'Actual schedule with leave and changes':'Pattern only (extrapolated)'}</div>`;
+}
+
+/* ---------- toolbar ---------- */
+function renderToolbar(){
+  $('viewRadios').innerHTML=[['month','Month'],['quarter','Quarter'],['year','Year'],['bid','Shift bid']]
+    .map(([v,l])=>`<label class="rad"><input type="radio" name="view" value="${v}" ${S.view===v?'checked':''}> ${l}</label>`).join('');
+  $('yearOpts').hidden=S.view!=='year';$('bidOpts').hidden=S.view!=='bid';
+  $('yearMode').value=S.yearMode;$('yearStart').value=S.yearStart;$('yearStart').hidden=S.yearMode!=='custom';
+  $('bidSel').innerHTML=S.bids.map((b,i)=>`<option value="${i}" ${i===S.bidIdx?'selected':''}>${esc(b.name)}</option>`).join('');
+  const bd=S.bids[S.bidIdx]||S.bids[0];$('bidStart').value=bd.start;$('bidEnd').value=bd.end;
+  $(S.useEdits?'m-real':'m-ext').checked=true;
+  {const L=S.pattern.length,d=mod(TODAY-anchorN(),L);$('cycLbl').textContent=`Today is day ${d+1} of ${L}`;$('cycLbl').title=`Day 1 of this cycle: ${fmtD(TODAY-d)}`}
+  $('skin').value=S.skin;$('tHol').checked=S.showHol;$('tPrem').checked=S.showPrem;$('tPrem').disabled=!S.showHol;
+  const br=[['pick','Pick a day'],...Object.keys(TYPES).filter(k=>k!=='note').map(k=>[k,TYPES[k].label]),['clear','Erase edits']];
+  $('brushes').innerHTML=br.map(([k,l])=>`<button class="btn ${S.brush===k?'on':''}" data-brush="${k}">${k!=='pick'&&k!=='clear'?`<i class="sw k-${k}"></i>`:''}${l}</button>`).join('');
+  $('cal').classList.toggle('painting',S.brush!=='pick');
+  $('schedName').textContent=`— ${S.name}`;
+}
+function renderStatus(){
+  const i=info(TODAY),len=S.pattern.length,pos=mod(TODAY-anchorN(),len)+1;
+  $('sToday').textContent=`Today ${fmtD(TODAY)}: ${i.label}${i.work+i.leave?` ${fmtH(i.work+i.leave)} h`:''} · day ${pos} of ${len}`;
+  let n=TODAY+1,lim=TODAY+400;const want=i.work>0;
+  while(n<lim&&(info(n).work>0)===want)n++;
+  $('sNext').textContent=n<lim?`Next ${want?'day off':'workday'}: ${fmtD(n)}`:'';
+  let pd=TODAY;while(!isPayday(pd)&&pd<TODAY+60)pd++;
+  $('sPP').textContent=(S.ppLen?`${ppLabel(ppStart(TODAY))} · ends ${fmtD(ppStart(TODAY)+S.ppLen-1)}`:`Pay week ${fmtD(pwStart(TODAY))} – ${fmtD(pwStart(TODAY)+6)}`)+(pd<TODAY+60?` · next payday ${pd===TODAY?'today':fmtD(pd)} (est. ${money(checkFor(periodForPayday(pd)).net)})`:'');
+}
+function applySkin(){const c=document.documentElement.classList;c.remove('skin-classic','skin-modern','skin-night','skin-light','skin-dark');c.add('skin-'+S.skin)}
+
+/* ---------- pattern tab ---------- */
+function renderPattern(){
+  $('preset').innerHTML=Object.entries(PRESETS).map(([k,p])=>`<option value="${k}" ${S.preset===k?'selected':''}>${esc(p.label)}</option>`).join('');
+  $('presetNote').textContent=(PRESETS[$('preset').value]||{}).note||'';
+  $('fName').value=S.name;$('fAnchor').value=S.anchor;$('fHours').value=S.hours;$('fLen').value=S.pattern.length;const dopts=(sel,fmt)=>{$(sel).innerHTML=DOWS.map((d,i)=>`<option value="${i}">${fmt(i)}</option>`).join('')};
+  const FULL=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const wf=$('wFirst').value;dopts('fPayDow',i=>FULL[i]);dopts('fPW',i=>`${FULL[i]} – ${FULL[(i+6)%7]}`);dopts('wFirst',i=>FULL[i]);
+  $('fPayDow').value=S.payDow;$('fPayWhen').value=S.payWhen;$('fPW').value=S.payWeekStart;$('fPPLen').value=S.ppLen;$('fPPA').value=S.ppAnchor;
+  $('wFirst').value=wf||5;
+  const cy=ymd(fromIso(S.cursor)).y;$('fedYr').textContent=`${cy} date`;
+  $('fedList').innerHTML=FED.map(([nm,f])=>`<tr><td>${esc(nm)}</td><td>${fmtD(f(cy))}</td><td><input type="checkbox" data-fed="${esc(nm)}" aria-label="Use ${esc(nm)}" ${S.fedOff.includes(nm)?'':'checked'}></td><td><input type="checkbox" data-fedp="${esc(nm)}" aria-label="${esc(nm)} is premium" ${S.fedPrem.includes(nm)?'checked':''}></td></tr>`).join('');
+  $('chRows').innerHTML=S.customHols.length?S.customHols.map((c,i)=>{const p=ymd(fromIso(c.date));
+    return `<tr><td>${esc(c.name)}</td><td>${c.repeat?`Every ${MONTHS[p.m]} ${p.d}`:fmtD(fromIso(c.date))+' only'}</td><td>${c.observe?'Moves to Fri/Mon':'Stays on the date'}</td><td><input type="checkbox" data-chp="${i}" aria-label="Premium" ${c.premium?'checked':''}></td><td><button class="btn" data-chdel="${i}">Remove</button></td></tr>`}).join('')
+    :'<tr><td colspan="5" class="muted">None yet. Add one above.</td></tr>';if(!$('wDate').value)$('wDate').value=toIso(TODAY);$('fHol').value=S.holidays;
+  const len=S.pattern.length,a=anchorN(),cs=a+Math.floor((TODAY-a)/len)*len;
+  const work=S.pattern.filter(h=>h>0).length,hrs=S.pattern.reduce((x,y)=>x+y,0);
+  $('cycSummary').textContent=`${len}-day cycle · ${work} workdays, ${len-work} days off · ${fmtH(hrs)} h per cycle · avg ${fmtH(hrs/len*7)} h/week · about ${fmtH(Math.round(hrs/len*365))} h/year. Dates shown are the cycle that includes today.`;
+  let h='';
+  S.pattern.forEach((v,i)=>{const n=cs+i;h+=`<div class="cc ${v>0?'w':'o'} ${n===TODAY?'todaycell':''}"><div class="lbl"><b>D${i+1}</b><span>${DOWS[wd(n)]} ${ymd(n).m+1}/${ymd(n).d}</span></div>
+    <button data-cyc="${i}" aria-label="Day ${i+1}: ${v>0?'work':'off'}, click to switch">${v>0?'WORK':'OFF'}</button>
+    <input type="number" min="0.25" max="24" step="0.25" value="${v>0?v:''}" data-cych="${i}" aria-label="Hours on day ${i+1}" ${v>0?'':'disabled tabindex="-1" class="hid"'}></div>`});
+  $('cyc').innerHTML=h;
+  $('lMin').value=S.longMin;$('sMax').value=S.shortMax;
+  const yy=ymd(fromIso(S.cursor)).y,ya=dn(yy,0,1),yb=dn(yy,11,31);$('cmpLegend').textContent=`Compare schedule types · ${yy}`;
+  const st=(fn)=>{let d=0,hh=0;for(let n=ya;n<=yb;n++){const x=fn(n);if(x>0){d++;hh+=x}}return{d,hh,r:offRuns(ya,yb,n=>!(fn(n)>0))}};
+  const rows=[[`Your schedule: ${S.name}`,S.pattern,anchorN(),true]].concat(Object.entries(PRESETS).filter(([k])=>k!=='blank').map(([k,p])=>[p.label,p.pattern,fromIso(p.anchor),false]));
+  const span=yb-ya+1;
+  $('cmpRows').innerHTML=rows.map(([nm,pt,an,me])=>{const x=st(n=>pt[mod(n-an,pt.length)]),rot=pt.length>7;
+    return `<tr${me?' style="font-weight:700"':''}><td>${esc(nm)}</td><td>${pt.length} d</td><td>${x.d}</td><td>${fmtH(Math.round((span-x.d)/span*1000)/10)}%</td><td>${fmtH(x.hh)}</td><td>${fmtH(x.hh/(span/7))}</td><td>${rot?x.r.long:'—'}</td><td>${rot?x.r.short:'—'}</td><td>${x.r.longest} d</td></tr>`}).join('');
+}
+
+/* ---------- edits tab ---------- */
+function leaveYear(){const c=fromIso(S.cursor),p=ymd(c);if(S.yearMode==='custom'){const s=ymd(fromIso(S.yearStart));let a=dn(p.y,s.m,s.d);if(a>c)a=dn(p.y-1,s.m,s.d);const e=ymd(a);return{a,b:dn(e.y+1,e.m,e.d)-1}}return{a:dn(p.y,0,1),b:dn(p.y,11,31)}}
+const PERS={year:'per year (all at once)',month:'per month',pp:'per pay period',day:'per day',workday:'per day worked',hour:'per hour worked'};
+const LTYPES=[['vac','Vacation'],['pto','PTO'],['sick','Sick'],['hol','Holiday off'],['flt','Floating'],['comp','Banked']];
+function bankYear(bk,a,b){const cap=bk.max===''||bk.max==null||+bk.max<=0?Infinity:+bk.max,amt=+bk.amt||0;let bal=+bk.start||0,lost=0,used=0,earned=0,cred=0,capDay=null;const pts=[];
+  const add=x=>{if(x<=0)return 0;const nb=Math.max(bal,Math.min(cap,bal+x));lost+=bal+x-nb;const g=nb-bal;bal=nb;return g};
+  if(bk.per==='year')earned+=add(amt);
+  for(let n=a;n<=b;n++){const i=info(n,true),pd=ymd(n);
+    if(bk.per==='month'&&pd.d===1)earned+=add(amt);
+    else if(bk.per==='day')earned+=add(amt);
+    else if(bk.per==='workday'&&i.work>0)earned+=add(amt);
+    else if(bk.per==='hour'&&i.work>0)earned+=add(amt*i.work);
+    else if(bk.per==='pp'&&perStart(n)+perLen()-1===n)earned+=add(amt);
+    if(bk.recv&&i.bank)cred+=add(i.work>0?i.work:(i.base||S.hours));
+    if(bk.poad&&i.poad>0)cred+=add(i.poad);
+    if(i.ltype&&bk.use.includes(i.ltype)){bal-=i.leave;used+=i.leave}
+    if(capDay==null&&cap<Infinity&&bal>=cap-1e-9)capDay=n;
+    pts.push(bal)}
+  return{pts,cap,end:bal,lost,used,earned,cred,capDay,a,b}}
+function niceMax(v){const e=Math.pow(10,Math.floor(Math.log10(v))),f=v/e;return (f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*e}
+function bankChart(r){const W=600,H=170,L=38,R=12,T=12,B=22,N=r.pts.length,mn=Math.min(0,...r.pts),pk=Math.max(...r.pts,r.cap<Infinity?r.cap:0,1);
+  const ym=niceMax(pk*1.08),x=k=>L+(W-L-R)*k/Math.max(1,N-1),y=v=>T+(H-T-B)*(ym-v)/(ym-mn);
+  let g='';for(let k=0;k<=4;k++){const v=mn+(ym-mn)*k/4;g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-5}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="var(--dim)">${fmtH(Math.round(v))}</text>`}
+  for(let k=0;k<N;k++){const p=ymd(r.a+k);if(p.d===1||k===0){g+=`<text x="${x(k)+2}" y="${H-6}" font-size="10" fill="var(--dim)">${MONTHS[p.m].slice(0,3)}</text><line x1="${x(k)}" x2="${x(k)}" y1="${T}" y2="${H-B}" stroke="var(--line)" stroke-width="1" stroke-dasharray="2 3"/>`}}
+  const pl=r.pts.map((v,k)=>`${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  let ex=`<polygon points="${x(0)},${y(Math.max(mn,0))} ${pl} ${x(N-1)},${y(Math.max(mn,0))}" fill="var(--rdo)" opacity=".55"/><polyline points="${pl}" fill="none" stroke="var(--accent)" stroke-width="2"/>`;
+  if(r.cap<Infinity)ex+=`<line x1="${L}" x2="${W-R}" y1="${y(r.cap)}" y2="${y(r.cap)}" stroke="var(--pp)" stroke-width="1.5" stroke-dasharray="6 4"/><text x="${W-R-4}" y="${y(r.cap)-4}" text-anchor="end" font-size="10" font-weight="700" fill="var(--pp)">Max ${fmtH(r.cap)} h</text>`;
+  if(r.capDay!=null){const k=r.capDay-r.a;ex+=`<circle cx="${x(k)}" cy="${y(r.cap)}" r="4" fill="var(--pp)"/>`}
+  if(TODAY>=r.a&&TODAY<=r.b){const k=TODAY-r.a;ex+=`<line x1="${x(k)}" x2="${x(k)}" y1="${T}" y2="${H-B}" stroke="var(--ink)" stroke-width="1.5"/><text x="${x(k)+3}" y="${T+9}" font-size="10" font-weight="700" fill="var(--ink)">Today</text><circle cx="${x(k)}" cy="${y(r.pts[k])}" r="3.5" fill="var(--ink)"/>`}
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Balance over the year">${g}${ex}</svg>`}
+function renderBanks(){const ly=leaveYear();$('bankLegend').textContent=`Leave banks · ${fmtD(ly.a)} – ${fmtD(ly.b)}`;
+  $('bankRows').innerHTML=S.banks.length?S.banks.map((b,i)=>`<tr${b.on?'':' class="muted"'}><td><input type="checkbox" data-bkon="${i}" ${b.on?'checked':''} aria-label="Use this bank"></td><td><input type="text" data-bk="${i}" data-f="name" value="${esc(b.name)}" aria-label="Bank name" style="min-width:130px"></td>
+    <td><input type="number" step="0.25" data-bk="${i}" data-f="start" value="${b.start}" aria-label="Start of year hours" style="width:76px"></td>
+    <td><input type="number" step="0.01" min="0" data-bk="${i}" data-f="amt" value="${b.amt}" aria-label="Hours earned" style="width:70px"></td>
+    <td><select data-bk="${i}" data-f="per" aria-label="How often">${Object.entries(PERS).map(([k,l])=>`<option value="${k}" ${b.per===k?'selected':''}>${l}</option>`).join('')}</select></td>
+    <td><input type="number" step="1" min="0" data-bk="${i}" data-f="max" value="${b.max}" placeholder="no max" aria-label="Maximum hours" style="width:76px"></td>
+    <td><div class="chips">${LTYPES.map(([k,l])=>`<label><input type="checkbox" data-bku="${i}" data-t="${k}" ${b.use.includes(k)?'checked':''}>${l}</label>`).join('')}</div></td>
+    <td><input type="radio" name="bkrecv" data-bkr="${i}" ${b.recv?'checked':''} aria-label="Receives banked holidays"></td>
+    <td><input type="radio" name="bkpoad" data-bkp="${i}" ${b.poad?'checked':''} aria-label="Receives POAD time"></td>
+    <td><button class="btn" data-bkdel="${i}">Remove</button></td></tr>`).join(''):'<tr><td colspan="10" class="muted">No banks yet.</td></tr>';
+  $('bankCards').innerHTML=(S.banks.some(b=>b.on)?'':'<p class="muted">Tick On for a bank to track its balance and see its chart.</p>')+S.banks.filter(b=>b.on).map(b=>{const r=bankYear(b,ly.a,ly.b),inY=TODAY>=ly.a&&TODAY<=ly.b,now=inY?r.pts[TODAY-ly.a]:null;
+    let v;
+    if(r.cap===Infinity)v='No maximum set.';
+    else if(r.capDay!=null)v=r.capDay<=TODAY?`At max since ${fmtD(r.capDay)}.`:`Reaches max on ${fmtD(r.capDay)}, about ${fmtH(Math.round((r.capDay-TODAY)/7*10)/10)} weeks from today.`;
+    else{const rate=(r.earned+r.cred-r.used)/(ly.b-ly.a+1);v=rate>0?`Doesn't reach max this year. At this pace, about ${fmtH(Math.round((r.cap-r.end)/rate/7))} more weeks after year end (estimate).`:'Doesn\u2019t reach max at this pace.'}
+    return `<div class="bank"><h4><span>${esc(b.name)}</span><span>${now!=null?fmtH(Math.round(now*100)/100)+' h now':''}</span></h4>
+      <div class="kv"><span>Start <b>${fmtH(+b.start||0)}</b></span><span>Earned <b>${fmtH(Math.round(r.earned*100)/100)}</b></span>${b.recv||b.poad?`<span>Banked holidays / POAD <b>${fmtH(Math.round(r.cred*100)/100)}</b></span>`:''}<span>Used <b>${fmtH(r.used)}</b></span>${r.lost>0.001?`<span>Lost to max <b>${fmtH(Math.round(r.lost*100)/100)}</b></span>`:''}<span>Year end <b>${fmtH(Math.round(r.end*100)/100)}</b></span></div>
+      ${bankChart(r)}<div class="verdict">${v}${r.end<0?' Balance goes negative — more leave is planned than earned.':''}</div></div>`}).join('');
+}
+function renderEdits(){renderBanks();
+  $('rType').innerHTML=Object.entries(TYPES).map(([k,t])=>`<option value="${k}">${t.label}</option>`).join('');
+  if(!$('rFrom').value){$('rFrom').value=toIso(TODAY);$('rTo').value=toIso(TODAY)}
+  const y=ymd(fromIso(S.cursor)).y,a=dn(y,0,1),b=dn(y,11,31),t=totals(a,b,true);
+  $('leaveLegend').textContent=`Leave used in ${y} (calendar year)`;
+  $('leaveStats').innerHTML=[['vac','Vacation'],['pto','PTO'],['sick','Sick'],['hol','Holiday'],['flt','Floating holiday'],['comp','Banked time off']].map(([k,l])=>`<div class="stat"><b>${fmtH(t.leave[k])}</b><span>${l} hours</span></div>`).join('')+`<div class="stat"><b>${fmtH(t.ot)}</b><span>Overtime hours</span></div>`;
+  const only=$('eYearOnly').checked;
+  const rows=Object.keys(S.edits).sort().filter(k=>!only||k.startsWith(y+'-'));
+  $('eRows').innerHTML=rows.length?rows.map(k=>{const n=fromIso(k),i=info(n,true),o=S.edits[k];const hrs=i.kind==='ot'?i.ot:(i.work+i.leave);
+    return `<tr><td>${k}</td><td>${DOWS[wd(n)]}</td><td>${i.sched?`Work ${fmtH(i.base)}h`:'RDO'}</td><td><i class="sw k-${o.t==='note'?'work':o.t}"></i>${o.bank?'Holiday banked · ':''}${o.poad?'POAD · ':''}${esc(o.t==='note'&&(o.aw||o.bank)&&!o.n?(o.aw?'Awarded pay':''):(TYPES[o.t]||{}).label||o.t)}${awNames(n).length?' + '+esc(awNames(n).join(', ')):''}</td><td>${fmtH(hrs)}</td><td class="note">${esc(o.n||'')}</td><td><button class="btn" data-del="${k}">Remove</button></td></tr>`}).join('')
+    :`<tr><td colspan="7" class="muted">No edits ${only?'in '+y:'yet'}. Use a brush on the Calendar tab or the range form above.</td></tr>`;
+}
+function stubHtml(c){
+  const order=v=>v.lab==='Regular'?0:v.lab==='Paid leave'?9:1;
+  const er=Object.values(c.b).filter(v=>v.h>0.001).sort((a,b)=>order(a)-order(b)||a.m-b.m).map(v=>`<tr><td>${esc(v.lab)}${v.m!==1?` (${fmtH(v.m)}×)`:''}</td><td class="n">${fmtH(v.h)}</td><td class="n">${money(v.$/v.h)}</td><td class="n">${money(v.$)}</td></tr>`).join('');
+  const dr=c.deds.filter(d=>d.amt>0.004).map(d=>`<tr><td>${esc(d.name)}${d.pre?' <span class="muted">(pre-tax)</span>':''}</td><td class="n">${money(d.amt)}</td></tr>`).join('');
+  return `<div class="stub"><div class="stubhead"><b>EARNINGS STATEMENT — ESTIMATE</b><span>${S.ppLen?ppLabel(c.s)+' · ':''}${fmtD(c.s)} – ${fmtD(c.e)} · Pay date ${fmtD(c.pd)}</span></div>
+    <table><thead><tr><th>Earnings</th><th class="n">Hours</th><th class="n">Rate</th><th class="n">Amount</th></tr></thead><tbody>${c.sal?`<tr><td>Salary (1 of ${perYear()} checks)</td><td class="n">—</td><td class="n">—</td><td class="n">${money(c.sal)}</td></tr>`:''}${er||(c.sal?'':'<tr><td colspan="4" class="muted">No paid hours in this period.</td></tr>')}
+    <tr class="tot"><td>Gross pay</td><td class="n">${fmtH(c.hours)}</td><td></td><td class="n">${money(c.gross)}</td></tr></tbody></table>
+    <table><thead><tr><th>Deductions</th><th class="n">Amount</th></tr></thead><tbody>${dr}<tr class="tot"><td>Total deductions</td><td class="n">${money(c.dt)}</td></tr></tbody></table>
+    ${c.diem>0.004?`<table><thead><tr><th>Not taxed</th><th class="n">Amount</th></tr></thead><tbody><tr><td>Per diem</td><td class="n">${money(c.diem)}</td></tr></tbody></table>`:''}
+    <div class="stubnet"><span>NET PAY</span><b>${money(c.net)}</b></div></div>`}
+function paydaysIn(y){const a=[];for(let n=dn(y,0,1);n<=dn(y,11,31);n++)if(isPayday(n))a.push(n);return a}
+function renderPay(){const P=S.pay;
+  const set=(id,k)=>{const el=$(id);if(el.type==='checkbox')el.checked=!!P[k];else el.value=P[k]};
+  [['pWage','wage'],['pWk','weekOt'],['pWkAt','weekOtAt'],['pWkR','weekOtRate'],['pSal','salary'],['pAnnual','annual'],['pSalOt','salOt'],['pPdH','pdHour'],['pPdD','pdDay'],['pPdW','pdWhen']].forEach(([i,k])=>set(i,k));
+  $('pSalOtR').value=+P.salOtRate>0?P.salOtRate:'';$('pSalOtR').placeholder=`auto: ${money((+P.annual||0)/2080)} (yearly ÷ 2080)`;
+  $('hourlyBox').hidden=P.salary;$('salBox').hidden=!P.salary;$('salOtRateL').hidden=!P.salOt;$('rulesBox').hidden=P.salary&&!P.salOt;
+  $('payNote').textContent=P.salary?`Each check pays yearly salary ÷ ${perYear()} (${money((+P.annual||0)/perYear())}). Leave doesn't change it.${P.salOt?' Overtime hours past your normal shift pay the full rule rate; premium rates inside your normal shift pay only the extra above 1×.':''}`:'Vacation, PTO, sick and holiday-off hours are paid at straight time. Mark field trips with the Field trip brush or day type.';
+  const csel=(i,f,v,none)=>`<select data-rule="${i}" data-f="${f}" aria-label="Condition">${none?'<option value="none">—</option>':''}${Object.entries(CONDS).map(([k,l])=>`<option value="${k}" ${v===k?'selected':''}>${l.replace('__ ','N ')}</option>`).join('')}</select>`;
+  const cnum=(i,f,c,n)=>c==='past'?` <input type="number" min="0" max="24" step="0.25" data-rule="${i}" data-f="${f}" value="${n??12}" style="width:56px" aria-label="Hours"> h`:'';
+  const R=P.rules,last=R.length-1;
+  $('ruleRows').innerHTML=R.map((r,i)=>`<tr${r.on?'':' class="muted"'}><td><input type="checkbox" data-rule="${i}" data-f="on" ${r.on?'checked':''} aria-label="Rule on"></td>
+    <td><input type="text" data-rule="${i}" data-f="name" value="${esc(r.name)}" aria-label="Rule name" style="min-width:150px"></td>
+    <td>${csel(i,'c1',r.c1,false)}${cnum(i,'n1',r.c1,r.n1)}</td><td>${csel(i,'c2',r.c2||'none',true)}${cnum(i,'n2',r.c2,r.n2)}</td>
+    <td><select data-rule="${i}" data-f="eff" aria-label="Effect"><option value="max" ${r.eff==='max'?'selected':''}>At least</option><option value="add" ${r.eff==='add'?'selected':''}>Add +</option><option value="set" ${r.eff==='set'?'selected':''}>Set to</option></select></td>
+    <td><input type="number" min="0" step="0.05" data-rule="${i}" data-f="rate" value="${r.rate}" style="width:64px" aria-label="Rate">×</td>
+    <td><input type="checkbox" data-rule="${i}" data-f="stop" ${r.stop?'checked':''} aria-label="Stop after this rule"></td>
+    <td><button class="btn" data-rmv="${i}" data-d="-1" ${i?'':'disabled'} aria-label="Move up">▲</button><button class="btn" data-rmv="${i}" data-d="1" ${i<last?'':'disabled'} aria-label="Move down">▼</button></td>
+    <td><button class="btn" data-rdel="${i}">Remove</button></td></tr>`).join('');
+  const pastN=Math.max(12,...R.filter(r=>r.on).flatMap(r=>[r.c1==='past'?+r.n1:0,r.c2==='past'?+r.n2:0]));
+  const sc=[['Regular hour on a workday',{a:0,normal:10,kind:'work'}],['Hour past normal shift',{a:10,normal:10,kind:'work'}],[`Hour past ${fmtH(pastN)} h in a day`,{a:pastN,normal:10,kind:'work'}],
+    ['Extra shift on an RDO',{a:0,normal:0,kind:'ot'}],['Swap in on an RDO',{a:0,normal:0,kind:'swin'}],['Field trip hour',{a:0,normal:10,kind:'ft'}],[`Field trip past ${fmtH(pastN)} h`,{a:pastN,normal:10,kind:'ft'}],
+    ['Holiday, normal hour',{a:0,normal:10,kind:'work',hol:1}],['Holiday, overtime hour',{a:10,normal:10,kind:'work',hol:1}],
+    ['Premium holiday, normal hour',{a:0,normal:10,kind:'work',hol:1,prem:1}],['Premium holiday, overtime hour',{a:10,normal:10,kind:'work',hol:1,prem:1}],[`Premium holiday past ${fmtH(pastN)} h`,{a:pastN,normal:10,kind:'work',hol:1,prem:1}]];
+  $('rateRows').innerHTML=sc.map(([l,x])=>{const r=rateAt({wd:3,...x});return `<tr><td>${l}</td><td><b>${fmtH(r.m)}×</b></td><td>${esc(r.lab)}</td><td>${money(r.m*(P.salary?salOtRate():(+P.wage||0)))}</td></tr>`}).join('');
+  $('dedRows').innerHTML=P.deds.map((d,i)=>`<tr><td><input type="text" data-ded="${i}" data-f="name" value="${esc(d.name)}" aria-label="Deduction name"></td>
+    <td><input type="number" step="0.01" min="0" data-ded="${i}" data-f="amt" value="${d.amt}" aria-label="Amount" style="width:80px"> ${d.type==='flat'?'$':'%'}</td>
+    <td><select data-ded="${i}" data-f="type" aria-label="Taken from"><option value="gross" ${d.type==='gross'?'selected':''}>% of gross</option><option value="taxable" ${d.type==='taxable'?'selected':''}>% after pre-tax</option><option value="flat" ${d.type==='flat'?'selected':''}>$ per check</option></select></td>
+    <td><input type="checkbox" data-ded="${i}" data-f="pre" ${d.pre?'checked':''} aria-label="Pre-tax"></td><td><button class="btn" data-dedel="${i}">Remove</button></td></tr>`).join('');
+  const AWR=P.salary?salOtRate():(+P.wage||0);
+  $('awRows').innerHTML=P.awards.length?P.awards.map((a,i)=>`<tr><td><input type="text" data-awi="${i}" data-f="name" value="${esc(a.name)}" aria-label="Name" style="min-width:150px"></td>
+    <td><input type="number" min="0" step="0.25" data-awi="${i}" data-f="hours" value="${a.hours}" aria-label="Hours"></td>
+    <td><input type="number" min="0" step="0.05" data-awi="${i}" data-f="mult" value="${a.mult}" aria-label="Rate"> ×</td>
+    <td>${money((+a.hours||0)*(+a.mult||0)*AWR)}</td><td><button class="btn" data-awdel="${i}">Remove</button></td></tr>`).join('')
+    :'<tr><td colspan="5" class="muted">None yet.</td></tr>';
+  const y=ymd(fromIso(S.cursor)).y,pds=paydaysIn(y);
+  let sel=S.stubDay&&pds.includes(fromIso(S.stubDay))?fromIso(S.stubDay):(pds.filter(n=>n<=TODAY).pop()??pds[0]);
+  $('stubSel').innerHTML=pds.map(n=>`<option value="${n}" ${n===sel?'selected':''}>${fmtD(n)}</option>`).join('');
+  $('stub').innerHTML=sel!=null?stubHtml(checkFor(periodForPayday(sel))):'<p class="muted">No paydays in this year.</p>';
+  $('chkLegend').textContent=`Checks paid in ${y}`;let tg=0,tn=0,td=0,tp=0;
+  $('chkRows').innerHTML=pds.map(n=>{const c=checkFor(periodForPayday(n));tg+=c.gross;tn+=c.net;td+=c.dt;tp+=c.diem;
+    return `<tr data-pd="${n}" class="${n===sel?'sel':''}"><td>${fmtD(n)}</td><td>${fmtD(c.s)} – ${fmtD(c.e)}</td><td>${fmtH(c.hours)}</td><td>${fmtH(c.ot)}</td><td>${money(c.gross)}</td><td>${money(c.dt)}</td><td>${money(c.diem)}</td><td><b>${money(c.net)}</b></td></tr>`}).join('')
+    +`<tr><td><b>Year total</b></td><td>${pds.length} checks</td><td></td><td></td><td><b>${money(tg)}</b></td><td><b>${money(td)}</b></td><td><b>${money(tp)}</b></td><td><b>${money(tn)}</b></td></tr>`;
+}
+function renderData(){$('exportTxt').value=JSON.stringify(S,null,1)}
+
+/* ---------- master render ---------- */
+function render(){
+  for(const k in holCache)delete holCache[k];
+  applySkin();
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.tab===S.tab));
+  ['cal','pat','edits','pay','data'].forEach(k=>$('p-'+k).hidden=S.tab!==k);
+  renderToolbar();
+  if(S.tab==='cal')renderCal();
+  if(S.tab==='pat')renderPattern();
+  if(S.tab==='edits')renderEdits();
+  if(S.tab==='data')renderData();
+  if(S.tab==='pay')renderPay();
+  renderStatus();save();
+}
+
+/* ---------- events: tabs & toolbar ---------- */
+document.querySelector('.tabs').addEventListener('click',e=>{const t=e.target.closest('.tab');if(t){S.tab=t.dataset.tab;render()}});
+$('viewRadios').addEventListener('change',e=>{S.view=e.target.value;render()});
+function step(dir){const c=fromIso(S.cursor),p=ymd(c);
+  if(S.view==='month')S.cursor=toIso(dn(p.y,p.m+dir,1));
+  else if(S.view==='quarter')S.cursor=toIso(dn(p.y,p.m+3*dir,1));
+  else if(S.view==='year')S.cursor=toIso(dn(p.y+dir,p.m,Math.min(p.d,28)));
+  else{const bd=S.bids[S.bidIdx],a=fromIso(bd.start),b=fromIso(bd.end),len=b-a+1;bd.start=toIso(a+dir*len);bd.end=toIso(b+dir*len)}
+  render()}
+$('prev').onclick=()=>step(-1);$('next').onclick=()=>step(1);
+$('cycBack').onclick=()=>{S.anchor=toIso(anchorN()-1);render()};
+$('cycFwd').onclick=()=>{S.anchor=toIso(anchorN()+1);render()};
+$('cycToday').onclick=()=>{S.anchor=toIso(TODAY);render()};
+$('todayBtn').onclick=()=>{S.cursor=toIso(TODAY);render()};
+$('yearMode').onchange=e=>{S.yearMode=e.target.value;render()};
+$('yearStart').onchange=e=>{if(e.target.value){S.yearStart=e.target.value;S.cursor=e.target.value;render()}};
+$('bidSel').onchange=e=>{S.bidIdx=+e.target.value;render()};
+$('bidStart').onchange=e=>{if(e.target.value){S.bids[S.bidIdx].start=e.target.value;render()}};
+$('bidEnd').onchange=e=>{if(e.target.value){S.bids[S.bidIdx].end=e.target.value;render()}};
+$('bidAdd').onclick=()=>{const last=S.bids[S.bids.length-1],a=fromIso(last.end)+1;S.bids.push({name:`Bid ${S.bids.length+1}`,start:toIso(a),end:toIso(a+90)});S.bidIdx=S.bids.length-1;render()};
+$('bidDel').onclick=()=>{if(S.bids.length>1){S.bids.splice(S.bidIdx,1);S.bidIdx=0;render()}};
+$('bidSel').ondblclick=()=>{};
+document.querySelectorAll('input[name=mode]').forEach(r=>r.onchange=e=>{S.useEdits=e.target.value==='1';render()});
+$('skin').onchange=e=>{S.skin=e.target.value;render()};
+$('tHol').onchange=e=>{S.showHol=e.target.checked;render()};
+$('tPrem').onchange=e=>{S.showPrem=e.target.checked;render()};
+$('brushes').addEventListener('click',e=>{const b=e.target.closest('[data-brush]');if(b){S.brush=b.dataset.brush;render()}});
+const framed=(()=>{try{return window.self!==window.top}catch(e){return true}})();
+$('printBtn').onclick=()=>{
+  if(framed){const n=$('printNote');n.hidden=false;n.textContent='Printing is turned off inside this preview window. Download the file and open it in Chrome, Edge or Firefox on your PC, then Print works (landscape is set automatically). Pick Month, Quarter, Year or Shift bid first to choose what prints.';return}
+  window.print()};
+
+/* ---------- calendar clicks & painting ---------- */
+let painting=false,painted=null;
+function paint(n){if(painted.has(n))return;painted.add(n);const k=toIso(n);
+  if(S.brush==='clear')delete S.edits[k];
+  else{const prev=S.edits[k];S.edits[k]={t:S.brush,...(prev&&prev.n?{n:prev.n}:{}),...(prev&&prev.aw?{aw:prev.aw}:{}),...(prev&&prev.bank?{bank:true}:{}),...(prev&&prev.poad&&(S.brush==='ot'||S.brush==='trn')?{poad:prev.poad,poadH:prev.poadH}:{})}}
+  if(!S.useEdits)S.useEdits=true;
+  renderCal()}
+function cellAt(x,y){const el=document.elementFromPoint(x,y);return el&&el.closest('[data-d]')}
+$('cal').addEventListener('pointerdown',e=>{const c=e.target.closest('[data-d]');if(!c)return;
+  if(S.brush==='pick'){openDlg(+c.dataset.d);return}
+  e.preventDefault();painting=true;painted=new Set();paint(+c.dataset.d)});
+window.addEventListener('pointermove',e=>{if(!painting)return;const c=cellAt(e.clientX,e.clientY);if(c)paint(+c.dataset.d)});
+window.addEventListener('pointerup',()=>{if(painting){painting=false;render()}});
+$('cal').addEventListener('keydown',e=>{const c=e.target.closest('[data-d]');if(c&&(e.key==='Enter'||e.key===' ')){e.preventDefault();openDlg(+c.dataset.d)}});
+
+/* ---------- day dialog ---------- */
+let dlgN=null,dlgT=null,dlgAw=new Set(),dlgBank=false;
+function openDlg(n){dlgN=n;const i=info(n,false),o=S.edits[toIso(n)];dlgT=o?o.t:null;
+  $('dTitle').textContent=fmtLong(n);
+  $('dInfo').textContent=`Pattern: ${i.sched?`workday, ${fmtH(i.base)} h`:'day off (RDO)'} · day ${mod(n-anchorN(),S.pattern.length)+1} of ${S.pattern.length}${i.hol?' · '+i.hol:''}`;
+  $('dHours').value=o&&o.h!=null?o.h:'';$('dNote').value=o&&o.n||'';
+  const dp=$('dPay');
+  if(isPayday(n)){const c=checkFor(periodForPayday(n));dp.hidden=false;
+    dp.innerHTML=`<b>Payday — estimated check</b><span class="muted">For ${S.ppLen?ppLabel(c.s)+', ':''}${fmtD(c.s)} – ${fmtD(c.e)} · ${fmtH(c.hours)} h, ${fmtH(c.ot)} OT h</span><div class="row"><span>Gross ${money(c.gross)}</span><span>· Deductions ${money(c.dt)}</span></div><div class="row"><span class="big">Net ${money(c.net)}</span><button class="btn" id="dPayGo">Open pay stub</button></div>`}
+  else dp.hidden=true;
+  {const o=S.edits[toIso(n)];dlgAw=new Set(o&&o.aw||[]);const A=S.pay.awards;
+   $('dAw').innerHTML=A.length?'<b>Awarded pay:</b>'+A.map(a=>`<label class="rad" style="font-weight:400"><input type="checkbox" data-aw="${esc(a.id)}" ${dlgAw.has(a.id)?'checked':''}> ${esc(a.name)} (${fmtH(+a.hours)} h × ${fmtH(+a.mult)})</label>`).join(''):'<span class="muted">Add awarded pay items (like a paid lunch) on the Paycheck tab.</span>'}
+  {const o=S.edits[toIso(n)];$('dPoadM').value=o&&o.poad||'';$('dPoadH').value=o&&o.poadH!=null?o.poadH:''}
+  {const o=S.edits[toIso(n)],he=holEntry(n,true),rb=S.banks.find(b=>b.recv&&b.on);dlgBank=!!(o&&o.bank);const db=$('dBank');db.hidden=!he;
+   if(he)db.dataset.n=n,drawBankBtn(he,rb)}
+  drawTypes();$('scrim').hidden=false;$('dSave').focus()}
+function drawBankBtn(he,rb){const i=info(dlgN,false),h=i.base>0?i.base:S.hours;
+  $('dBank').innerHTML=`<button class="btn ${dlgBank?'on':''}" id="dBankBtn">${dlgBank?'✓ Holiday banked':'Bank this holiday'}</button><span class="muted">${esc(he.nm)}: pays like a normal day (no holiday or premium rates)${rb?` and adds the hours worked (or ${fmtH(h)} h if off) to ${esc(rb.name)}`:'. Pick a bank to receive it on the Time Off tab'}.</span>`}
+function drawTypes(){
+  $('dTypes').innerHTML=`<button class="btn ${!dlgT?'on':''}" data-t="">Follow pattern</button>`+Object.entries(TYPES).map(([k,t])=>`<button class="btn ${dlgT===k?'on':''}" data-t="${k}">${k!=='note'?`<i class="sw k-${k}"></i>`:''}${t.label}</button>`).join('');
+  const i=info(dlgN,false);let ph='';
+  if(dlgT&&TYPES[dlgT]){const fake={...S.edits};}
+  if(!dlgT||dlgT==='note'||dlgT==='off')ph='—';else if(TYPES[dlgT].leave)ph=fmtH(i.base);else if(dlgT==='ot')ph=fmtH(i.sched?2:S.hours);else ph=fmtH(i.base||S.hours);
+  $('dHours').placeholder=ph;$('dHours').disabled=!dlgT||dlgT==='note'||dlgT==='off';drawPoad()}
+function drawPoad(){const show=dlgT==='ot'||dlgT==='trn';$('dPoad').hidden=!show;if(!show)return;const m=$('dPoadM').value;$('dPoadPart').hidden=m!=='partial';
+  const rb=S.banks.find(b=>b.poad&&b.on);$('dPoadNote').textContent=m?`POAD hours pay straight time and add the same hours to ${rb?rb.name:'a bank (pick one under Gets POAD on Time Off)'}.`:'Hours past your normal shift are paid by your OT rules.'}
+$('dPoadM').addEventListener('change',drawPoad);
+$('dBank').addEventListener('click',e=>{if(e.target.id==='dBankBtn'){dlgBank=!dlgBank;drawBankBtn(holEntry(dlgN,true),S.banks.find(b=>b.recv&&b.on))}});
+$('dAw').addEventListener('change',e=>{const id=e.target.dataset.aw;if(id==null)return;if(e.target.checked)dlgAw.add(id);else dlgAw.delete(id)});
+$('dTypes').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(b){dlgT=b.dataset.t||null;drawTypes()}});
+function closeDlg(){$('scrim').hidden=true;dlgN=null}
+$('dSave').onclick=()=>{const k=toIso(dlgN),note=$('dNote').value.trim(),h=$('dHours').value;
+  if(!dlgT&&!note&&!dlgAw.size&&!dlgBank)delete S.edits[k];
+  else{const o={t:dlgT||'note'};if(h!==''&&!$('dHours').disabled)o.h=+h;if(note)o.n=note;if(dlgAw.size)o.aw=[...dlgAw];if(dlgBank&&holEntry(dlgN,true))o.bank=true;{const pm=$('dPoadM').value;if(pm&&(dlgT==='ot'||dlgT==='trn')){o.poad=pm;if(pm==='partial')o.poadH=+$('dPoadH').value||0}}S.edits[k]=o;S.useEdits=true}
+  closeDlg();render()};
+$('dClear').onclick=()=>{delete S.edits[toIso(dlgN)];closeDlg();render()};
+$('dCancel').onclick=closeDlg;$('dX').onclick=closeDlg;
+$('scrim').addEventListener('pointerdown',e=>{if(e.target===$('scrim'))closeDlg()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('scrim').hidden)closeDlg()});
+
+/* ---------- pattern events ---------- */
+$('preset').onchange=e=>{$('presetNote').textContent=PRESETS[e.target.value].note};
+$('loadPreset').onclick=()=>{const k=$('preset').value,p=PRESETS[k];S.preset=k;S.name=p.name;S.anchor=(k==='r410'||k==='r58')?toIso(pwStart(TODAY)):p.anchor;S.hours=p.hours;S.pattern=p.pattern.slice();render()};
+$('fPW').onchange=e=>{S.payWeekStart=+e.target.value;S.weekStart=S.payWeekStart;render()};
+$('fPPLen').onchange=e=>{S.ppLen=+e.target.value;render()};
+$('fPPA').onchange=e=>{if(e.target.value){S.ppAnchor=e.target.value;render()}};
+$('wBuild').onclick=()=>{const off=Math.max(1,Math.min(6,Math.round(+$('wOff').value||3))),h=+$('wHours').value||S.hours,shift=+$('wShift').value;
+  const start=pwStart(fromIso($('wDate').value||toIso(TODAY))),p0=mod(+$('wFirst').value-S.payWeekStart,7),weeks=shift===0?1:7,pt=[];
+  for(let k=0;k<weeks;k++)for(let i=0;i<7;i++)pt.push(mod(i-(p0+k*shift),7)<off?0:h);
+  S.pattern=pt;S.anchor=toIso(start);S.hours=h;S.preset='';S.name=`Rotating ${7-off}/${fmtH(h)} (${DOWS[S.payWeekStart]}–${DOWS[(S.payWeekStart+6)%7]} pay week)`;
+  $('wMsg').textContent=`Built a ${pt.length}-day cycle starting ${fmtD(start)}.`;render()};
+$('fName').oninput=e=>{S.name=e.target.value||'My schedule';$('schedName').textContent='— '+S.name;save()};
+$('fAnchor').onchange=e=>{if(e.target.value){S.anchor=e.target.value;render()}};
+$('aBack').onclick=()=>{S.anchor=toIso(anchorN()-1);render()};
+$('aFwd').onclick=()=>{S.anchor=toIso(anchorN()+1);render()};
+$('fHours').onchange=e=>{const v=+e.target.value;if(v>0){S.hours=v;render()}};
+$('setLen').onclick=()=>{const L=Math.max(1,Math.min(140,Math.round(+$('fLen').value||7)));
+  if(L>S.pattern.length)S.pattern=S.pattern.concat(new Array(L-S.pattern.length).fill(0));else S.pattern=S.pattern.slice(0,L);render()};
+$('fPayDow').onchange=e=>{S.payDow=+e.target.value;render()};
+$('lMin').onchange=e=>{const v=Math.round(+e.target.value);if(v>=3){S.longMin=v;if(S.shortMax>=v)S.shortMax=v-1;render()}};
+$('sMax').onchange=e=>{const v=Math.round(+e.target.value);if(v>=1){S.shortMax=v;if(S.longMin<=v)S.longMin=v+1;render()}};
+$('fPayWhen').onchange=e=>{S.payWhen=e.target.value;render()};
+$('fedList').addEventListener('change',e=>{const d=e.target.dataset;
+  if(d.fed!=null){S.fedOff=S.fedOff.filter(x=>x!==d.fed);if(!e.target.checked)S.fedOff.push(d.fed)}
+  else if(d.fedp!=null){S.fedPrem=S.fedPrem.filter(x=>x!==d.fedp);if(e.target.checked)S.fedPrem.push(d.fedp)}else return;render()});
+$('chRows').addEventListener('change',e=>{const i=e.target.dataset.chp;if(i==null)return;S.customHols[+i].premium=e.target.checked;render()});
+$('chAdd').onclick=()=>{const nm=$('chName').value.trim(),d=$('chDate').value;if(!nm||!d){$('chMsg').textContent='Give the holiday a name and a date.';return}
+  S.customHols.push({name:nm,date:d,repeat:$('chRepeat').checked,observe:$('chObs').checked,premium:$('chPrem').checked});$('chName').value='';$('chMsg').textContent=`Added ${nm}.`;render()};
+$('chRows').addEventListener('click',e=>{const b=e.target.closest('[data-chdel]');if(b){S.customHols.splice(+b.dataset.chdel,1);render()}});
+$('fHol').onchange=e=>{S.holidays=e.target.value;render()};
+$('cyc').addEventListener('click',e=>{const b=e.target.closest('[data-cyc]');if(!b)return;const i=+b.dataset.cyc;S.pattern[i]=S.pattern[i]>0?0:S.hours;render()});
+$('cyc').addEventListener('change',e=>{const t=e.target.closest('[data-cych]');if(!t)return;const v=+t.value;if(v>0){S.pattern[+t.dataset.cych]=v;render()}});
+
+/* ---------- edits events ---------- */
+$('rApply').onclick=()=>{const a=$('rFrom').value,b=$('rTo').value;if(!a||!b){$('rMsg').textContent='Pick both dates.';return}
+  let x=fromIso(a),y=fromIso(b);if(y<x)[x,y]=[y,x];if(y-x>800){$('rMsg').textContent='Keep the range under about two years.';return}
+  const t=$('rType').value,h=$('rHours').value,note=$('rNote').value.trim(),only=$('rOnlyWork').checked;let c=0;
+  for(let n=x;n<=y;n++){if(only&&baseH(n)<=0)continue;const o={t};if(h!=='')o.h=+h;if(note&&c===0)o.n=note;S.edits[toIso(n)]=o;c++}
+  S.useEdits=true;$('rMsg').textContent=`Added ${c} day${c===1?'':'s'} of ${TYPES[t].label}.`;render()};
+$('eYearOnly').onchange=render;
+$('bankRows').addEventListener('change',e=>{const t=e.target,d=t.dataset;
+  if(d.bk!=null){const b=S.banks[+d.bk];b[d.f]=d.f==='name'||d.f==='per'?t.value:(d.f==='max'&&t.value===''?'':+t.value)}
+  else if(d.bku!=null){const b=S.banks[+d.bku];b.use=b.use.filter(x=>x!==d.t);if(t.checked)b.use.push(d.t)}
+  else if(d.bkr!=null){S.banks.forEach((b,i)=>b.recv=i===+d.bkr)}
+  else if(d.bkon!=null){S.banks[+d.bkon].on=t.checked}
+  else if(d.bkp!=null){S.banks.forEach((b,i)=>b.poad=i===+d.bkp)}else return;render()});
+$('bankRows').addEventListener('click',e=>{const b=e.target.closest('[data-bkdel]');if(b){S.banks.splice(+b.dataset.bkdel,1);render()}});
+$('bankAdd').onclick=()=>{S.banks.push({on:true,id:'b'+Date.now().toString(36),name:'New bank',start:0,amt:0,per:'year',max:'',use:[]});render()};
+$('eRows').addEventListener('click',e=>{const b=e.target.closest('[data-del]');if(b){delete S.edits[b.dataset.del];render()}});
+function armed(btn,fn){btn.addEventListener('click',()=>{if(btn.classList.contains('armed')){btn.classList.remove('armed');btn.textContent=btn.dataset.orig;fn()}
+  else{btn.dataset.orig=btn.textContent;btn.classList.add('armed');btn.textContent='Click again to confirm';setTimeout(()=>{if(btn.classList.contains('armed')){btn.classList.remove('armed');btn.textContent=btn.dataset.orig}},4000)}})}
+armed($('clearAll'),()=>{S.edits={};render()});
+armed($('resetBtn'),()=>{S=sampleState();S.tab='cal';render()});
+
+/* ---------- data events ---------- */
+$('dlBtn').onclick=()=>{
+  if(framed){$('dMsg').textContent='Downloads are blocked in this preview. Use Copy backup text, or open the downloaded app file.';return}
+  const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`shift-calendar-backup-${toIso(TODAY)}.json`;document.body.appendChild(a);a.click();a.remove();$('dMsg').textContent='Saved.'};
+$('copyBtn').onclick=()=>{const t=$('exportTxt');navigator.clipboard.writeText(t.value).then(()=>$('dMsg').textContent='Copied.',()=>{t.focus();t.select();$('dMsg').textContent='Press Ctrl+C to copy the selected text.'})};
+function loadText(txt){try{const o=JSON.parse(txt);if(!Array.isArray(o.pattern)||!o.anchor)throw 0;S={...sampleState(),...o,tab:'cal'};render();$('iMsg').textContent='Loaded.'}catch(e){$('iMsg').textContent='That doesn’t look like a Shift Calendar backup. Check that you pasted all of it.'}}
+$('pasteLoad').onclick=()=>loadText($('importTxt').value);
+$('fileIn').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>loadText(r.result);r.readAsText(f)};
+
+$('dPay').addEventListener('click',e=>{if(e.target.id==='dPayGo'){S.stubDay=toIso(dlgN);S.cursor=toIso(dlgN);S.tab='pay';closeDlg();render()}});
+$('p-pay').addEventListener('change',e=>{const t=e.target;
+  if(t.dataset.pk){S.pay[t.dataset.pk]=t.type==='checkbox'?t.checked:t.tagName==='SELECT'?t.value:+t.value;render();return}
+  if(t.dataset.ded!=null){const d=S.pay.deds[+t.dataset.ded],f=t.dataset.f;d[f]=f==='pre'?t.checked:f==='amt'?+t.value:t.value;render();return}
+  if(t.id==='stubSel'){S.stubDay=toIso(+t.value);render()}});
+$('dedRows').addEventListener('click',e=>{const b=e.target.closest('[data-dedel]');if(b){S.pay.deds.splice(+b.dataset.dedel,1);render()}});
+$('ruleRows').addEventListener('change',e=>{const t=e.target,i=t.dataset.rule;if(i==null)return;e.stopPropagation();const r=S.pay.rules[+i],f=t.dataset.f;
+  r[f]=t.type==='checkbox'?t.checked:t.type==='number'?+t.value:t.value;if((f==='c1'||f==='c2')&&t.value==='past'){const nf=f==='c1'?'n1':'n2';if(r[nf]==null)r[nf]=12}render()});
+$('ruleRows').addEventListener('click',e=>{const mv=e.target.closest('[data-rmv]'),dl=e.target.closest('[data-rdel]'),R=S.pay.rules;
+  if(mv){const i=+mv.dataset.rmv,j=i+(+mv.dataset.d);if(j>=0&&j<R.length){[R[i],R[j]]=[R[j],R[i]];render()}}
+  if(dl){R.splice(+dl.dataset.rdel,1);render()}});
+$('ruleAdd').onclick=()=>{S.pay.rules.push({on:true,name:'New rule',c1:'all',c2:'none',eff:'max',rate:1,stop:false});render()};
+armed($('ruleReset'),()=>{S.pay.rules=JSON.parse(JSON.stringify(RULEDEF));render()});
+$('awRows').addEventListener('change',e=>{const t=e.target,i=t.dataset.awi;if(i==null)return;e.stopPropagation();const a=S.pay.awards[+i];a[t.dataset.f]=t.type==='number'?+t.value:t.value;render()});
+$('awRows').addEventListener('click',e=>{const b=e.target.closest('[data-awdel]');if(b){S.pay.awards.splice(+b.dataset.awdel,1);render()}});
+$('awAdd').onclick=()=>{S.pay.awards.push({id:'a'+Date.now().toString(36),name:'New award',hours:1,mult:1});render()};
+$('dedAdd').onclick=()=>{S.pay.deds.push({name:'New deduction',amt:0,type:'flat'});render()};
+$('chkRows').addEventListener('click',e=>{const r=e.target.closest('[data-pd]');if(r){S.stubDay=toIso(+r.dataset.pd);render()}});
+function stubStep(d){const y=ymd(fromIso(S.cursor)).y;let pds=paydaysIn(y),cur=S.stubDay?fromIso(S.stubDay):+$('stubSel').value,i=pds.indexOf(cur)+d;
+  if(i<0){S.cursor=toIso(dn(y-1,6,1));pds=paydaysIn(y-1);i=pds.length-1}else if(i>=pds.length){S.cursor=toIso(dn(y+1,6,1));pds=paydaysIn(y+1);i=0}
+  S.stubDay=toIso(pds[i]);render()}
+$('stubPrev').onclick=()=>stubStep(-1);$('stubNext').onclick=()=>stubStep(1);
+let xBlob=null,xName='';
+function saveBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+function openExport(title,msg,html,blob,name,text){xBlob=blob;xName=name;$('xTitle').textContent=title;$('xMsg').textContent=msg;$('xBody').innerHTML=html;$('xCopy').hidden=!text;$('xCopy').onclick=()=>{navigator.clipboard.writeText(text).then(()=>$('xMsg').textContent='Copied.',()=>{const t=$('xBody').querySelector('textarea');if(t){t.focus();t.select()}$('xMsg').textContent='Press Ctrl+C to copy the selected text.'})};$('xScrim').hidden=false}
+$('xSave').onclick=()=>{if(framed){$('xMsg').textContent='Saving files is blocked in this preview. Use the downloaded app or your GitHub site, or right-click the image / copy the text.';return}if(xBlob)saveBlob(xBlob,xName)};
+$('xClose').onclick=$('xX').onclick=()=>{$('xScrim').hidden=true};
+const csvCell=v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+const toCsv=rows=>rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
+const slug=s=>s.replace(/[^\w-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+function showCsv(rows,name){const txt=toCsv(rows);openExport('Export CSV',`${rows.length-1} rows. Opens in Excel, Google Sheets or Numbers.`,`<textarea readonly style="min-height:260px">${esc(txt)}</textarea>`,new Blob(['\ufeff'+txt],{type:'text/csv'}),name,txt)}
+$('csvDays').onclick=()=>{const r=range(),rows=[['Date','Day','Pattern','Pattern hours','Status','Hours worked','Leave type','Leave hours','OT hours','POAD hours','Holiday','Premium','Payday','Pay period','Awarded pay','Holiday banked','Note']];
+  for(let n=r.a;n<=r.b;n++){const i=info(n),o=i.o||{};rows.push([toIso(n),DOWS[wd(n)],i.sched?'Work':'RDO',i.base,i.label,i.work,i.ltype?TYPES[i.ltype].label:'',i.leave,i.ot,i.poad||0,i.hol,i.prem?'Yes':'',isPayday(n)?'Yes':'',S.ppLen?ppLabel(ppStart(n)):'',awNames(n).join('; '),i.bank?'Yes':'',o.n||''])}
+  showCsv(rows,`${slug(S.name)}-${slug(r.label)}-days.csv`)};
+$('csvPP').onclick=()=>{const r=range(),rows=[['Pay period','Start','End','Payday','Workdays','Hours worked','Leave hours','OT hours','Hours above 1x','Gross','Deductions','Per diem','Net']];
+  for(let s0=perStart(r.a);s0<=r.b;s0+=perLen()){const e=s0+perLen()-1,x=totals(s0,e),c=checkFor(s0);
+    rows.push([S.ppLen?ppLabel(s0)+' '+ymd(s0).y:'Week',toIso(s0),toIso(e),toIso(c.pd),x.days,x.work,Object.values(x.leave).reduce((p,q)=>p+q,0),x.ot,Math.round(c.ot*100)/100,c.gross.toFixed(2),c.dt.toFixed(2),c.diem.toFixed(2),c.net.toFixed(2)])}
+  showCsv(rows,`${slug(S.name)}-${slug(r.label)}-pay-periods.csv`)};
+function loadH2C(){return window.html2canvas?Promise.resolve():new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc)})}
+$('imgBtn').onclick=async()=>{const b=$('imgBtn');b.disabled=true;b.textContent='Making image…';
+  try{await loadH2C();document.body.classList.add('snap');const el=$('p-cal');
+    const cv=await window.html2canvas(el,{scale:2,backgroundColor:getComputedStyle(document.querySelector('.window')).backgroundColor,logging:false});
+    const url=cv.toDataURL('image/png');const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+    openExport('Export image',framed?'Right-click the image to copy or save it.':'Preview of the image. Save it as a PNG file.',`<img src="${url}" alt="Calendar image">`,blob,`${slug(S.name)}-${slug(range().label)}.png`)}
+  catch(e){openExport('Export image','The image maker couldn\u2019t load. It needs an internet connection the first time. Try again once you\u2019re online, or use Print to save a PDF.','',null,'')}
+  finally{document.body.classList.remove('snap');b.disabled=false;b.textContent='Image (PNG)'}};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('xScrim').hidden)$('xScrim').hidden=true});
+render();
+})();
+</script>
+
+</body>
+</html>
