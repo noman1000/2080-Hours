@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Shift Calendar</title>
+<title>2080 Hours</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
@@ -171,7 +171,7 @@ details summary{cursor:pointer;font-weight:700;color:var(--legend)}
 .ppwrap{margin-top:6px}
 /* big month */
 .big .mgrid{gap:3px}
-.bd{position:relative;min-height:84px;text-align:left;padding:4px 5px;cursor:pointer;user-select:none;border:1px solid var(--line);border-radius:calc(var(--r)/2);display:flex;flex-direction:column;gap:2px;min-width:0;overflow:hidden;background:var(--panel)}
+.bd{position:relative;min-height:84px;text-align:left;padding:4px 5px;cursor:pointer;user-select:none;border:1px solid var(--line);border-radius:calc(var(--r)/2);display:flex;flex-direction:column;gap:2px;min-width:0;overflow:hidden}
 .bd.k-work{background:var(--panel)}
 .bn{font-weight:700;font-size:16px;font-variant-numeric:tabular-nums}
 .bt{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
@@ -258,7 +258,7 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
 
 
 <div class="window">
-  <div class="titlebar"><span class="ttl">Shift Calendar</span><span class="sub" id="schedName"></span><div class="winbtns deco" aria-hidden="true"><span>_</span><span>□</span><span>×</span></div></div>
+  <div class="titlebar"><span class="ttl">2080 Hours</span><span class="sub" id="schedName"></span><div class="winbtns deco" aria-hidden="true"><span>_</span><span>□</span><span>×</span></div></div>
   <div class="tabs noprint" role="tablist">
     <button class="tab" role="tab" data-tab="cal" id="t-cal">Calendar</button>
     <button class="tab" role="tab" data-tab="pat" id="t-pat">Schedule pattern</button>
@@ -498,6 +498,7 @@ const TYPES={
   ft:{label:'Field trip',short:'FT',work:1},
   swin:{label:'Swap in (work)',short:'SWAP',work:1},
   off:{label:'Swap out (off)',short:'OFF'},
+  rdo:{label:'RDO (day off)',short:'RDO'},
   note:{label:'Note only',short:'NOTE'}
 };
 
@@ -627,7 +628,7 @@ function info(n,useEdits){
   else if(o.t==='ot'){const x=h??(sched?2:S.hours);r.ot=x;r.work=base+x}
   else if(o.t==='trn'){r.work=h??(base||S.hours)}
   else if(o.t==='swin'||o.t==='ft'){r.work=h??(base||S.hours)}
-  else if(o.t==='off'){r.work=0}
+  else if(o.t==='off'||o.t==='rdo'){r.work=0}
   if(o.poad&&(o.t==='ot'||o.t==='trn')){const cap=r.work-Math.min(r.work,base);r.poad=o.poad==='full'?cap:Math.max(0,Math.min(cap,+o.poadH||0))}
   return r;
 }
@@ -662,7 +663,7 @@ const awNames=n=>{const o=S.edits[toIso(n)];return o&&o.aw?o.aw.map(id=>(S.pay.a
 const bidEnd=n=>S.bids.filter(b=>fromIso(b.end)===n).map(b=>b.name).join(', ');
 function cellTitle(i){let s=`${fmtD(i.n)} · ${i.label}`;{const be=bidEnd(i.n);if(be)s+=` · Last day of bid: ${be}`;const an=awNames(i.n);if(an.length)s+=` · + ${an.join(', ')}`;if(i.bank)s+=' · Holiday banked';if(i.poad>0)s+=` · POAD ${fmtH(i.poad)} h`}if(S.ppLen){const p=ppStart(i.n);s+=` · ${ppLabel(p)}${p===i.n?' begins':''}`}if(isPayday(i.n))s+=' · PAYDAY';const h=i.work+i.leave;if(h)s+=` ${fmtH(h)} h`;if(i.hol)s+=` · ${i.hol}${i.prem?' (premium)':''}`;if(i.o&&i.o.n)s+=` · ${i.o.n}`;return s}
 function dayClasses(i,a,b){let c=`k-${i.kind}`;if(i.hol&&(i.kind==='work'||i.kind==='rdo'))c+=' holmark';if(i.n===TODAY)c+=' today';if(i.n<a||i.n>b)c+=' out';if(i.o&&i.o.n)c+=' note';if(isPayday(i.n))c+=' pay';if(bidEnd(i.n))c+=' bidend';if((i.o&&i.o.aw&&i.o.aw.length)||i.poad>0)c+=' aw';if(i.prem)c+=' prem';return c}
-function wkCell(s){let t=0;for(let n=s;n<s+7;n++){const i=info(n);t+=i.work+i.leave}return `<div class="wt" title="Pay week ${fmtD(s)} – ${fmtD(s+6)}"><span>PAY WK</span><b>${fmtH(t)}</b></div>`}
+function wkCell(s){let t=0;for(let n=s;n<s+7;n++){const i=info(n);t+=i.work+i.leave}return `<div class="wt" title="Hours paid in the pay week ${fmtD(s)} – ${fmtD(s+6)}, including days in the next or previous month"><span>WEEK HRS</span><b>${fmtH(t)}</b></div>`}
 function dowRow(){let h='';for(let i=0;i<7;i++)h+=`<div class="dow">${DOWS[(i+S.weekStart)%7]}</div>`;return h}
 function monthHours(y,m,a,b){let t=0;const f=dn(y,m,1),l=dn(y,m+1,0);for(let n=Math.max(f,a);n<=Math.min(l,b);n++){const i=info(n);t+=i.work+i.leave}return t}
 function mini(y,m,a,b){
@@ -1039,9 +1040,9 @@ armed($('resetBtn'),()=>{S=sampleState();S.tab='cal';render()});
 /* ---------- data events ---------- */
 $('dlBtn').onclick=()=>{
   if(framed){$('dMsg').textContent='Downloads are blocked in this preview. Use Copy backup text, or open the downloaded app file.';return}
-  const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`shift-calendar-backup-${toIso(TODAY)}.json`;document.body.appendChild(a);a.click();a.remove();$('dMsg').textContent='Saved.'};
+  const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`2080-hours-backup-${toIso(TODAY)}.json`;document.body.appendChild(a);a.click();a.remove();$('dMsg').textContent='Saved.'};
 $('copyBtn').onclick=()=>{const t=$('exportTxt');navigator.clipboard.writeText(t.value).then(()=>$('dMsg').textContent='Copied.',()=>{t.focus();t.select();$('dMsg').textContent='Press Ctrl+C to copy the selected text.'})};
-function loadText(txt){try{const o=JSON.parse(txt);if(!Array.isArray(o.pattern)||!o.anchor)throw 0;S={...sampleState(),...o,tab:'cal'};render();$('iMsg').textContent='Loaded.'}catch(e){$('iMsg').textContent='That doesn’t look like a Shift Calendar backup. Check that you pasted all of it.'}}
+function loadText(txt){try{const o=JSON.parse(txt);if(!Array.isArray(o.pattern)||!o.anchor)throw 0;S={...sampleState(),...o,tab:'cal'};render();$('iMsg').textContent='Loaded.'}catch(e){$('iMsg').textContent='That doesn’t look like a 2080 Hours backup. Check that you pasted all of it.'}}
 $('pasteLoad').onclick=()=>loadText($('importTxt').value);
 $('fileIn').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>loadText(r.result);r.readAsText(f)};
 
