@@ -1,6 +1,8 @@
 # 2080-Hours
 Customizable calendar for sharing and printing work shifts, vacations, and unusual shifts. Vibecoded by Claude™
 
+Check it out[ HERE](https://noman1000.github.io/2080-Hours/)
+
 <img width="1782" height="1253" alt="image" src="https://github.com/user-attachments/assets/baefa0b3-429b-4138-a699-42e912f66f6c" />
 
 <img width="2243" height="1191" alt="image" src="https://github.com/user-attachments/assets/003eb2d3-ef47-4986-aa65-e0e0cd918f65" />
