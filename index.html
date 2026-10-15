@@ -170,6 +170,22 @@ label.rad{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-wei
 .fedlist label{font-weight:400}
 details summary{cursor:pointer;font-weight:700;color:var(--legend)}
 .ppwrap{margin-top:6px}
+/* Text styles per day type, so days can be told apart without relying on color */
+.k-rdo,.ts-rdo,.k-work.holmark{font-weight:700;font-style:normal;text-decoration:none}
+.k-vac,.ts-vac{font-weight:700;font-style:normal;text-decoration:underline}
+.k-pto,.ts-pto{font-weight:700;font-style:italic;text-decoration:none}
+.k-sick,.ts-sick{font-weight:400;font-style:italic;text-decoration:underline}
+.k-hol,.k-holoff,.ts-hol{font-weight:700;font-style:normal;text-decoration:underline double}
+.k-flt,.ts-flt{font-weight:400;font-style:italic;text-decoration:underline double}
+.k-comp,.ts-comp{font-weight:700;font-style:italic;text-decoration:underline}
+.k-trn,.ts-trn{font-weight:400;font-style:italic;text-decoration:none}
+.k-ft,.ts-ft{font-weight:400;font-style:italic;text-decoration:underline dotted}
+.k-ot,.ts-ot{font-weight:700;font-style:italic;text-decoration:underline double}
+.k-swin,.ts-swin{font-weight:400;font-style:normal;text-decoration:underline}
+.k-off,.ts-off{font-weight:700;font-style:normal;text-decoration:line-through}
+.k-vto,.ts-vto{font-weight:400;font-style:italic;text-decoration:line-through}
+[class*="k-"],[class*="ts-"]{text-decoration-thickness:2px;text-underline-offset:3px}
+.d.k-work{font-weight:400}
 /* big month */
 .big .mgrid{gap:3px}
 .bd{position:relative;min-height:84px;text-align:left;padding:4px 5px;cursor:pointer;user-select:none;border:1px solid var(--line);border-radius:calc(var(--r)/2);display:flex;flex-direction:column;gap:2px;min-width:0;overflow:hidden}
@@ -706,7 +722,7 @@ function renderCal(){
       rows+=`<tr><td>${ppLabel(s)} · ${ymd(s).y}</td><td>${fmtD(s)} – ${fmtD(e)}</td><td>${fmtD(paydayOf(s))}</td><td>${x.days}</td><td>${fmtH(x.work)}</td><td>${fmtH(lv)}</td><td>${fmtH(x.ot)}</td><td><b>${fmtH(x.paid)}</b></td><td>${money(checkFor(s).net)}</td></tr>`}
     $('ppRows').innerHTML=rows;$('ppSum').textContent=`Pay periods in this view (${c})`}
   $('legend').innerHTML=[['work','Workday'],['rdo','RDO / day off'],['holmark','Holiday'],['vac','Vacation'],['pto','PTO'],['sick','Sick'],['trn','Training'],['ot','Overtime'],['flt','Floating holiday'],['comp','Banked time off'],['ft','Field trip'],['swin','Swap in'],['off','Swap out'],['vto','VTO (unpaid)']]
-    .map(([k,l])=>`<span><i class="sw ${k==='holmark'?'k-hol':'k-'+k}" style="${k==='work'?'background:var(--panel)':''}"></i>${l}</span>`).join('')+'<span><i class="sw" style="background:linear-gradient(315deg,var(--aw) 0 6px,transparent 6px)"></i>Awarded pay / POAD</span><span>● = has a note</span><span>Outlined = today</span>'+'<span><i class="sw" style="background:linear-gradient(135deg,var(--pp) 45%,transparent 46%)"></i>Payday</span><span><i class="sw" style="border-right:3px solid var(--pw)"></i>Last day of a shift bid</span>'+(S.showHol&&S.showPrem?'<span><i class="sw k-hol" style="box-shadow:inset 0 0 0 2px var(--prem)"></i>Premium holiday</span>':'');
+    .map(([k,l])=>`<span><i class="sw ${k==='holmark'?'k-hol':'k-'+k}" style="${k==='work'?'background:var(--panel)':''}"></i><span class="${k==='holmark'?'ts-rdo':'ts-'+k}">${l}</span></span>`).join('')+'<span><i class="sw" style="background:linear-gradient(315deg,var(--aw) 0 6px,transparent 6px)"></i>Awarded pay / POAD</span><span>● = has a note</span><span>Outlined = today</span>'+'<span><i class="sw" style="background:linear-gradient(135deg,var(--pp) 45%,transparent 46%)"></i>Payday</span><span><i class="sw" style="border-right:3px solid var(--pw)"></i>Last day of a shift bid</span>'+(S.showHol&&S.showPrem?'<span><i class="sw k-hol" style="box-shadow:inset 0 0 0 2px var(--prem)"></i>Premium holiday</span>':'');
   $('printHead').innerHTML=`<h2 style="margin:0 0 4px;font-size:16px">${esc(S.name)} — ${esc(r.label)}</h2><div style="font-size:11px;margin-bottom:6px">Printed ${fmtD(TODAY)} · ${S.useEdits?'Actual schedule with leave and changes':'Pattern only (extrapolated)'}</div>`;
 }
 
@@ -722,7 +738,7 @@ function renderToolbar(){
   {const L=S.pattern.length,d=mod(TODAY-anchorN(),L);$('cycLbl').textContent=`Today is day ${d+1} of ${L}`;$('cycLbl').title=`Day 1 of this cycle: ${fmtD(TODAY-d)}`}
   $('skin').value=S.skin;$('tHol').checked=S.showHol;$('tPrem').checked=S.showPrem;$('tPrem').disabled=!S.showHol;
   const br=[['pick','Pick a day'],...Object.keys(TYPES).filter(k=>k!=='note').map(k=>[k,TYPES[k].label]),['clear','Erase edits']];
-  $('brushes').innerHTML=br.map(([k,l])=>`<button class="btn ${S.brush===k?'on':''}" data-brush="${k}">${k!=='pick'&&k!=='clear'?`<i class="sw k-${k}"></i>`:''}${l}</button>`).join('');
+  $('brushes').innerHTML=br.map(([k,l])=>`<button class="btn ${S.brush===k?'on':''}" data-brush="${k}">${k!=='pick'&&k!=='clear'?`<i class="sw k-${k}"></i>`:''}<span class="ts-${k}">${l}</span></button>`).join('');
   $('cal').classList.toggle('painting',S.brush!=='pick');
   $('schedName').textContent=`— ${S.name}`;
 }
@@ -965,7 +981,7 @@ function openDlg(n){dlgN=n;const i=info(n,false),o=S.edits[toIso(n)];dlgT=o?o.t:
 function drawBankBtn(he,rb){const i=info(dlgN,false),h=i.base>0?i.base:S.hours;
   $('dBank').innerHTML=`<button class="btn ${dlgBank?'on':''}" id="dBankBtn">${dlgBank?'✓ Holiday banked':'Bank this holiday'}</button><span class="muted">${esc(he.nm)}: pays like a normal day (no holiday or premium rates)${rb?` and adds the hours worked (or ${fmtH(h)} h if off) to ${esc(rb.name)}`:'. Pick a bank to receive it on the Time Off tab'}.</span>`}
 function drawTypes(){
-  $('dTypes').innerHTML=`<button class="btn ${!dlgT?'on':''}" data-t="">Follow pattern</button>`+Object.entries(TYPES).map(([k,t])=>`<button class="btn ${dlgT===k?'on':''}" data-t="${k}">${k!=='note'?`<i class="sw k-${k}"></i>`:''}${t.label}</button>`).join('');
+  $('dTypes').innerHTML=`<button class="btn ${!dlgT?'on':''}" data-t="">Follow pattern</button>`+Object.entries(TYPES).map(([k,t])=>`<button class="btn ${dlgT===k?'on':''}" data-t="${k}">${k!=='note'?`<i class="sw k-${k}"></i>`:''}<span class="ts-${k}">${t.label}</span></button>`).join('');
   const i=info(dlgN,false);let ph='';
   if(dlgT&&TYPES[dlgT]){const fake={...S.edits};}
   if(!dlgT||dlgT==='note'||dlgT==='off')ph='—';else if(TYPES[dlgT].leave)ph=fmtH(i.base);else if(dlgT==='ot')ph=fmtH(i.sched?2:S.hours);else ph=fmtH(i.base||S.hours);
