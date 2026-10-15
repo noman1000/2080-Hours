@@ -1,5 +1,5 @@
 # 2080-Hours
-Customizable calendar for sharing and printing work shifts, vacations, and unusual shifts. Vibecoded by Claude™
+Customizable calendar for sharing and printing work shifts, vacations, and unusual shifts for sharing with friends, family, or yourself to hang a postboard/fridge. Vibecoded by Claude™
 
 Check it out[ HERE](https://noman1000.github.io/2080-Hours/)
 
@@ -8,7 +8,7 @@ Check it out[ HERE](https://noman1000.github.io/2080-Hours/)
 <img width="2243" height="1191" alt="image" src="https://github.com/user-attachments/assets/003eb2d3-ef47-4986-aa65-e0e0cd918f65" />
 
 
-It includes a paycheck estimator for people who work rotating or fixed schedules. It's a single HTML file that runs in any browser, needs no install or account, and keeps all your data in your own browser.
+Includes presets and customizability for rotating or fixed schedules and a paycheck estimator with functions for custom rules depending on your company policies for awarded time/OT/etc. It's a single HTML file that runs in any browser, needs no install or account, and keeps all your data in your own browser.
 
 **Use it online:** https://noman1000.github.io/2080-Hours/
 **Use it offline:** download `index.html` and double-click it.
@@ -16,7 +16,7 @@ It includes a paycheck estimator for people who work rotating or fixed schedules
 ## What it does
 
 ### Calendar
-- Month, Quarter, Year and Shift bid views, with weeks laid out from your pay week's first day.
+- Month, Quarter, Year and Shift bid views, with weeks laid out from your pay week's first day with custom pay week start days.
 - **Actual** view (with your edits) or **Pattern only** (the plain rotation projected forward).
 - Click a day to edit it, or pick a brush and drag across days: Vacation, PTO, Sick, Holiday off, Floating holiday, Banked time off, Training, Field trip, Extra shift / OT, Swap in, Swap out.
 - Markers for paydays (red corner), the last day of a shift bid (side bar), holidays (pink), premium holidays (gold ring), and awarded pay or POAD (blue corner).
