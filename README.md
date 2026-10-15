@@ -1,9 +1,9 @@
 # 2080-Hours
 Customizable calendar for sharing and printing work shifts, vacations, and unusual shifts. Vibecoded by Claude™
 
-It's also a paycheck estimator for people who work rotating or fixed schedules. It's a single HTML file that runs in any browser, needs no install or account, and keeps all your data in your own browser.
+It includes a paycheck estimator for people who work rotating or fixed schedules. It's a single HTML file that runs in any browser, needs no install or account, and keeps all your data in your own browser.
 
-**Use it online:** https://noman1000.github.io/2080-Hours/ (after GitHub Pages is turned on)
+**Use it online:** https://noman1000.github.io/2080-Hours/
 **Use it offline:** download `index.html` and double-click it.
 
 ## What it does
@@ -41,7 +41,7 @@ It's also a paycheck estimator for people who work rotating or fixed schedules. 
 - Pay stub view for any payday, plus a year table of every check.
 
 ### Looks
-Classic (old-school teal), Modern (follow system, light or dark) and Night shift.
+Classic (old-school teal), Modern (follow system, light or dark) and Night Shift.
 
 ## Your data
 Everything is stored in your browser's local storage on the device you use. Nothing is sent anywhere. To move your setup to another browser or computer, use **Save / load → Save backup file** (or **Copy backup text**) and load it on the other side.
