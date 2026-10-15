@@ -1,2 +1,2 @@
-# Shift-Calendar
+# 2080-Hours
 Customizable calendar for sharing and printing work shifts, vacations, and unusual shifts. Vibecoded by Claude™
