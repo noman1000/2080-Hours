@@ -92,6 +92,12 @@ legend{color:var(--legend);font-weight:700;padding:0 4px;font-size:12px;letter-s
 .btn.on{background:var(--field);font-weight:700;box-shadow:inset 0 0 0 1px var(--pick)}
 .btn.primary{background:var(--accent);color:var(--accentink);font-weight:700}
 .btn.danger.armed{background:var(--ot);color:var(--otink)}
+.btn:disabled{opacity:.5;cursor:default}
+.lnk{background:none;border:0;padding:0;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}
+.tabrow{display:flex;align-items:flex-end;flex-wrap:wrap}
+.tabrow .tabs{flex:1}
+.hist{display:flex;gap:4px;padding:8px 8px 4px}
+.savewarn{margin:8px 8px 0;padding:4px 8px;background:var(--ot);color:var(--otink);font-weight:700}
 .btn:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible,.d:focus-visible{outline:2px dotted var(--pick);outline-offset:1px}
 input[type=text],input[type=date],input[type=number],select,textarea{background:var(--field);border:var(--bw) solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);border-radius:var(--r);padding:3px 5px;min-height:26px}
 :root:not(.skin-classic) :is(input[type=text],input[type=date],input[type=number],select,textarea){border-color:var(--line)}
@@ -279,12 +285,16 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
 
 <div class="window">
   <div class="titlebar"><span class="ttl">2080 Hours</span><span class="sub" id="schedName"></span><div class="winbtns deco" aria-hidden="true"><span>_</span><span>□</span><span>×</span></div></div>
-  <div class="tabs noprint" role="tablist">
+  <div class="savewarn noprint" id="saveWarn" role="alert" hidden>Changes aren’t being saved in this browser (storage is full or blocked, as in a private window). <button class="lnk" id="warnGo">Save a backup file</button> to keep them.</div>
+  <div class="tabrow noprint">
+  <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="cal" id="t-cal">Calendar</button>
     <button class="tab" role="tab" data-tab="pat" id="t-pat">Schedule pattern</button>
     <button class="tab" role="tab" data-tab="edits" id="t-edits">Time Off</button>
     <button class="tab" role="tab" data-tab="pay" id="t-pay">Paycheck</button>
     <button class="tab" role="tab" data-tab="data" id="t-data">Save / load</button>
+  </div>
+  <div class="hist"><button class="btn" id="undoBtn" title="Undo (Ctrl+Z)" disabled>↶ Undo</button><button class="btn" id="redoBtn" title="Redo (Ctrl+Y)" disabled>Redo ↷</button></div>
   </div>
 
   <!-- CALENDAR -->
@@ -453,13 +463,14 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
   <div class="page" id="p-data" hidden>
     <fieldset><legend>Where your data lives</legend><p>Everything is saved automatically in this browser on this computer. To move it to another computer or browser, or to keep a backup, save a backup file below and load it on the other side.</p></fieldset>
     <fieldset><legend>Back up</legend><div class="row" style="margin-bottom:6px"><button class="btn primary" id="dlBtn">Save backup file</button><button class="btn" id="copyBtn">Copy backup text</button><span class="muted" id="dMsg"></span></div>
+      <p class="muted" id="bakAge"></p>
       <textarea id="exportTxt" readonly aria-label="Backup text"></textarea></fieldset>
     <fieldset><legend>Restore</legend><div class="row" style="margin-bottom:6px"><input type="file" id="fileIn" accept=".json,application/json"><button class="btn" id="pasteLoad">Load pasted text</button><span class="muted" id="iMsg"></span></div>
       <textarea id="importTxt" placeholder="Paste backup text here" aria-label="Backup text to load"></textarea></fieldset>
     <fieldset><legend>Start over</legend><div class="row"><button class="btn danger" id="resetBtn">Reset to the sample schedule</button></div></fieldset>
   </div>
 
-  <div class="statusbar noprint"><div id="sToday"></div><div id="sNext"></div><div id="sPP"></div></div>
+  <div class="statusbar noprint"><div id="sToday"></div><div id="sNext"></div><div id="sPP"></div><div id="sBak" hidden><span id="sBakTxt"></span> · <button class="lnk" id="bakGo">Back up now</button></div></div>
 </div>
 
 <div class="scrim" id="sScrim" hidden>
@@ -558,10 +569,6 @@ function sampleState(){
     bids:[{name:'Fall–winter bid',start:'2026-10-04',end:'2027-01-02'}],bidIdx:0,skin:'modern',tab:'cal',brush:'pick',preset:'f58',weekly:true};
 }
 let S;
-try{S=JSON.parse(localStorage.getItem('shiftcal.v1'))}catch(e){S=null}
-if(!S||!Array.isArray(S.pattern)||!S.pattern.length)S=sampleState();
-S.edits=S.edits||{};S.bids=S.bids&&S.bids.length?S.bids:[{name:'Bid 1',start:toIso(TODAY),end:toIso(TODAY+90)}];
-if(S.preset==='mine'||S.name==='JFK_10HR'){const p=PRESETS.r410;S.name=p.name;S.hours=p.hours;S.pattern=p.pattern.slice();S.anchor=toIso(TODAY-mod(wd(TODAY)-1,7));S.preset='r410'}
 const RULEDEF=[{on:true,name:'Field trip',c1:'ft',c2:'none',eff:'set',rate:1.75,stop:true},
   {on:true,name:'Swap (straight time)',c1:'swin',c2:'none',eff:'set',rate:1,stop:true},
   {on:true,name:'Premium holiday overtime',c1:'prem',c2:'ot',eff:'set',rate:3,stop:true},
@@ -572,6 +579,11 @@ const RULEDEF=[{on:true,name:'Field trip',c1:'ft',c2:'none',eff:'set',rate:1.75,
 const PAYDEF={awards:[{id:'lunch',name:'Paid lunch',hours:0.5,mult:1}],salary:false,annual:15080,salOt:false,salOtRate:0,pdHour:0,pdDay:0,pdWhen:'all',wage:7.25,weekOt:false,weekOtAt:40,weekOtRate:1.5,rules:RULEDEF,
   deds:[{name:'401(k) / retirement',amt:5,type:'gross',pre:true},{name:'Health insurance',amt:100,type:'flat',pre:true},{name:'Federal income tax (est.)',amt:12,type:'taxable'},
     {name:'Social Security',amt:6.2,type:'gross'},{name:'Medicare',amt:1.45,type:'gross'},{name:'State income tax (est.)',amt:5,type:'taxable'},{name:'City tax',amt:0,type:'taxable'}]};
+const DATA_V=2;
+/* fills in anything older saves and backups are missing; runs at startup and on every load, so new defaults go here */
+function upgrade(){
+S.edits=S.edits||{};S.bids=S.bids&&S.bids.length?S.bids:[{name:'Bid 1',start:toIso(TODAY),end:toIso(TODAY+90)}];
+if(S.preset==='mine'||S.name==='JFK_10HR'){const p=PRESETS.r410;S.name=p.name;S.hours=p.hours;S.pattern=p.pattern.slice();S.anchor=toIso(TODAY-mod(wd(TODAY)-1,7));S.preset='r410'}
 S.pay=Object.assign(JSON.parse(JSON.stringify(PAYDEF)),S.pay||{});
 if(!Array.isArray(S.banks))S.banks=[{id:'vac',name:'Vacation',start:40,amt:6,per:'pp',max:240,use:['vac']},{id:'sick',name:'Sick',start:0,amt:4,per:'pp',max:'',use:['sick']},
   {id:'pto',name:'PTO',start:0,amt:0,per:'year',max:'',use:['pto']},{id:'flt',name:'Floating holiday',start:0,amt:10,per:'year',max:10,use:['flt']},
@@ -580,8 +592,12 @@ S.banks.forEach(b=>{if(b.on==null)b.on=false});
 if(!S.banks.some(b=>b.poad)){const r=S.banks.find(b=>b.recv&&b.on);if(r)r.poad=true}
 if(!S.styles||typeof S.styles!=='object')S.styles={};if(!Array.isArray(S.brushOff))S.brushOff=[];if(!S.holidays)S.holidays='mark';if(!S.holObs)S.holObs='actual';
 if(S.longMin==null)S.longMin=4;if(S.shortMax==null)S.shortMax=2;if(S.payWeekStart==null)S.payWeekStart=1;S.weekStart=S.payWeekStart;if(S.payDow==null)S.payDow=5;if(!S.payWhen)S.payWhen='after';if(!Array.isArray(S.customHols))S.customHols=[];if(!Array.isArray(S.fedOff))S.fedOff=[];if(S.showHol==null)S.showHol=S.holidays!=='hide';if(S.holidays==='hide')S.holidays='mark';if(S.showPrem==null)S.showPrem=true;if(!Array.isArray(S.fedPrem))S.fedPrem=["New Year's Day",'Independence Day','Thanksgiving','Christmas Day'];if(S.ppLen==null)S.ppLen=14;if(!S.ppAnchor)S.ppAnchor='2026-01-05';
-const pwStart=n=>n-mod(wd(n)-S.payWeekStart,7);
 if(S.weekly==null)S.weekly=['r410','r58','f58','f410'].includes(S.preset)||/pay week\)$/.test(S.name||'')||/^Rotating (4\/10|5\/8)$/.test(S.name||'');
+if(!(S.v>DATA_V))S.v=DATA_V}
+const pwStart=n=>n-mod(wd(n)-S.payWeekStart,7);
+try{S=JSON.parse(localStorage.getItem('shiftcal.v1'))}catch(e){S=null}
+if(!S||!Array.isArray(S.pattern)||!S.pattern.length)S=sampleState();
+upgrade();
 function rotWeeks(d){const P=S.pattern,out=[];for(let w=0;w<P.length;w+=7)for(let j=0;j<7;j++)out.push(P[w+mod(j-d,7)]);S.pattern=out}
 function alignWeekly(){if(!S.weekly||S.pattern.length%7)return;const a=fromIso(S.anchor),d=mod(wd(a)-S.payWeekStart,7);if(!d)return;S.anchor=toIso(a-d);rotWeeks(d)}
 function shiftCycle(d){if(S.weekly&&S.pattern.length%7===0){alignWeekly();rotWeeks(d)}else S.anchor=toIso(fromIso(S.anchor)+d)}
@@ -629,7 +645,19 @@ function checkFor(s){const P=S.pay,W=+P.wage||0,L=perLen(),e=s+L-1,b={};
 function isPayday(n){if(wd(n)!==S.payDow)return false;
   if(S.payWhen==='last')return payLast(perStart(n),perLen())===n;
   const s=perStart(n-1);return payAfter(s-1)===n||payAfter(s+perLen()-1)===n}
-function save(){try{localStorage.setItem('shiftcal.v1',JSON.stringify(S))}catch(e){}}
+/* ---------- saving & undo ---------- */
+const UIKEYS=new Set(['view','cursor','tab','brush','stubDay','bidIdx','useEdits','yearMode','lastBackup']);
+const undoS=[],redoS=[];let histKey=null,histFull=null,histT=0;
+function save(){
+  const full=JSON.stringify(S),key=JSON.stringify(S,function(k,v){return this===S&&UIKEYS.has(k)?undefined:v});
+  if(histKey!==null&&key!==histKey){if(Date.now()-histT>1000){undoS.push(histFull);if(undoS.length>100)undoS.shift()}redoS.length=0;histT=Date.now()}
+  histKey=key;histFull=full;
+  let ok=true;try{localStorage.setItem('shiftcal.v1',full)}catch(e){ok=false}
+  $('saveWarn').hidden=ok;$('undoBtn').disabled=!undoS.length;$('redoBtn').disabled=!redoS.length}
+function histMove(from,to){if(!from.length)return;to.push(histFull);const o=JSON.parse(from.pop());
+  UIKEYS.forEach(k=>{if(k in S)o[k]=S[k];else delete o[k]});S=o;histKey=null;histT=0;render()}
+const backupAge=()=>S.lastBackup?TODAY-fromIso(S.lastBackup):null;
+function markBackup(){S.lastBackup=toIso(TODAY);render()}
 
 /* ---------- holidays ---------- */
 const holCache={};
@@ -769,6 +797,8 @@ function renderStatus(){
   $('sNext').textContent=n<lim?`Next ${want?'day off':'workday'}: ${fmtD(n)}`:'';
   let pd=TODAY;while(!isPayday(pd)&&pd<TODAY+60)pd++;
   $('sPP').textContent=(S.ppLen?`${ppLabel(ppStart(TODAY))} · ends ${fmtD(ppStart(TODAY)+S.ppLen-1)}`:`Pay week ${fmtD(pwStart(TODAY))} – ${fmtD(pwStart(TODAY)+6)}`)+(pd<TODAY+60?` · next payday ${pd===TODAY?'today':fmtD(pd)} (est. ${money(checkFor(periodForPayday(pd)).net)})`:'');
+  const a=backupAge();$('sBak').hidden=!Object.keys(S.edits).length||(a!=null&&a<30)||S.tab==='data';
+  $('sBakTxt').textContent=a==null?'No backup yet':`No backup in ${a} days`;
 }
 function applySkin(){const c=document.documentElement.classList;c.remove('skin-classic','skin-modern','skin-night','skin-light','skin-dark');c.add('skin-'+S.skin)}
 
@@ -917,7 +947,8 @@ function renderPay(){const P=S.pay;
     return `<tr data-pd="${n}" class="${n===sel?'sel':''}"><td>${fmtD(n)}</td><td>${fmtD(c.s)} – ${fmtD(c.e)}</td><td>${fmtH(c.hours)}</td><td>${fmtH(c.ot)}</td><td>${money(c.gross)}</td><td>${money(c.dt)}</td><td>${money(c.diem)}</td><td><b>${money(c.net)}</b></td></tr>`}).join('')
     +`<tr><td><b>Year total</b></td><td>${pds.length} checks</td><td></td><td></td><td><b>${money(tg)}</b></td><td><b>${money(td)}</b></td><td><b>${money(tp)}</b></td><td><b>${money(tn)}</b></td></tr>`;
 }
-function renderData(){$('exportTxt').value=JSON.stringify(S,null,1)}
+function renderData(){$('exportTxt').value=JSON.stringify(S,null,1);const a=backupAge();
+  $('bakAge').textContent=a==null?'No backup saved from this browser yet.':`Last backup: ${a===0?'today':a===1?'yesterday':a+' days ago'}.`}
 
 /* ---------- master render ---------- */
 const DEFTS={work:{b:0,i:0,d:'none'},rdo:{b:1,i:0,d:'none'},holmark:{b:1,i:0,d:'none'},vac:{b:1,i:0,d:'underline'},pto:{b:1,i:1,d:'none'},sick:{b:0,i:1,d:'underline'},
@@ -1098,14 +1129,22 @@ $('eRows').addEventListener('click',e=>{const b=e.target.closest('[data-del]');i
 function armed(btn,fn){btn.addEventListener('click',()=>{if(btn.classList.contains('armed')){btn.classList.remove('armed');btn.textContent=btn.dataset.orig;fn()}
   else{btn.dataset.orig=btn.textContent;btn.classList.add('armed');btn.textContent='Click again to confirm';setTimeout(()=>{if(btn.classList.contains('armed')){btn.classList.remove('armed');btn.textContent=btn.dataset.orig}},4000)}})}
 armed($('clearAll'),()=>{S.edits={};render()});
-armed($('resetBtn'),()=>{S=sampleState();S.tab='cal';render()});
+armed($('resetBtn'),()=>{S=sampleState();S.tab='cal';upgrade();histT=0;render()});
+$('undoBtn').onclick=()=>histMove(undoS,redoS);
+$('redoBtn').onclick=()=>histMove(redoS,undoS);
+document.addEventListener('keydown',e=>{if(!(e.ctrlKey||e.metaKey)||e.altKey)return;const k=e.key.toLowerCase();if(k!=='z'&&k!=='y')return;
+  if(e.target.closest&&e.target.closest('input:not([type=checkbox]):not([type=radio]):not([type=file]),textarea,[contenteditable]'))return;
+  if(!$('scrim').hidden||!$('xScrim').hidden||!$('sScrim').hidden)return;
+  e.preventDefault();if(k==='y'||e.shiftKey)histMove(redoS,undoS);else histMove(undoS,redoS)});
+$('warnGo').onclick=$('bakGo').onclick=()=>{S.tab='data';render()};
 
 /* ---------- data events ---------- */
 $('dlBtn').onclick=()=>{
   if(framed){$('dMsg').textContent='Downloads are blocked in this preview. Use Copy backup text, or open the downloaded app file.';return}
-  const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`2080-hours-backup-${toIso(TODAY)}.json`;document.body.appendChild(a);a.click();a.remove();$('dMsg').textContent='Saved.'};
-$('copyBtn').onclick=()=>{const t=$('exportTxt');navigator.clipboard.writeText(t.value).then(()=>$('dMsg').textContent='Copied.',()=>{t.focus();t.select();$('dMsg').textContent='Press Ctrl+C to copy the selected text.'})};
-function loadText(txt){try{const o=JSON.parse(txt);if(!Array.isArray(o.pattern)||!o.anchor)throw 0;S={...sampleState(),...o,tab:'cal'};render();$('iMsg').textContent='Loaded.'}catch(e){$('iMsg').textContent='That doesn’t look like a 2080 Hours backup. Check that you pasted all of it.'}}
+  const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`2080-hours-backup-${toIso(TODAY)}.json`;document.body.appendChild(a);a.click();a.remove();markBackup();$('dMsg').textContent='Saved.'};
+$('copyBtn').onclick=()=>{const t=$('exportTxt');navigator.clipboard.writeText(t.value).then(()=>{markBackup();$('dMsg').textContent='Copied.'},()=>{t.focus();t.select();$('dMsg').textContent='Press Ctrl+C to copy the selected text.'})};
+function loadText(txt){try{const o=JSON.parse(txt);if(!Array.isArray(o.pattern)||!o.anchor)throw 0;S={...sampleState(),...o,tab:'data'};upgrade();histT=0;render();
+  $('iMsg').textContent=o.v>DATA_V?'Loaded. This backup is from a newer version of 2080 Hours, so some settings may not show here.':'Loaded. Undo puts back what you had before.'}catch(e){$('iMsg').textContent='That doesn’t look like a 2080 Hours backup. Check that you pasted all of it.'}}
 $('pasteLoad').onclick=()=>loadText($('importTxt').value);
 $('fileIn').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>loadText(r.result);r.readAsText(f)};
 
