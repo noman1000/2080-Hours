@@ -22,7 +22,7 @@ Includes presets and customizability for rotating or fixed schedules and a paych
 - Markers for paydays (red corner), the last day of a shift bid (side bar), holidays (pink), premium holidays (gold ring), and awarded pay or POAD (blue corner).
 - Cycle position controls to shift the whole rotation a day earlier or later.
 - Totals: paid hours, hours worked, workdays, days off, % of days off, weekend days off, leave and OT hours, holiday and premium holiday hours worked, and, for rotating schedules, long, regular and short weekends plus the longest stretch off.
-- Export: print, PNG image, CSV of days, CSV of pay periods.
+- Export: print, PNG image, CSV of days, CSV of pay periods, and a calendar file (.ics) of workdays, time off, paydays and holidays for Google, Apple or Outlook calendars.
 
 ### Schedule pattern
 - Presets: 5/8, rotating 5/8, 4/10, rotating 4/10, rotating 9.5, 9/80, 7 on / 7 off, Pitman 2-2-3, 4 on / 4 off, or a blank cycle.

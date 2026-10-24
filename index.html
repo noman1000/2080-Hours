@@ -324,7 +324,7 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
         <label class="rad"><input type="checkbox" id="tHol"> Holidays</label>
         <label class="rad"><input type="checkbox" id="tPrem"> Premium</label>
       </div></fieldset>
-      <fieldset><legend>Export</legend><div class="row"><button class="btn primary" id="printBtn">Print</button><button class="btn" id="imgBtn">Image (PNG)</button><button class="btn" id="csvDays">CSV — days</button><button class="btn" id="csvPP">CSV — pay periods</button></div></fieldset>
+      <fieldset><legend>Export</legend><div class="row"><button class="btn primary" id="printBtn">Print</button><button class="btn" id="imgBtn">Image (PNG)</button><button class="btn" id="csvDays">CSV — days</button><button class="btn" id="csvPP">CSV — pay periods</button><button class="btn" id="icsBtn">Calendar (.ics)</button></div></fieldset>
       <fieldset><legend>Look</legend><div class="row"><select id="skin">
         <option value="classic">Classic (teal)</option><option value="modern">Modern — follow system</option><option value="light">Modern — light</option><option value="dark">Modern — dark</option><option value="night">Night shift</option></select><button class="btn" id="styBtn">Day colors &amp; text…</button></div></fieldset>
     </div>
@@ -1170,9 +1170,9 @@ function stubStep(d){const y=ymd(fromIso(S.cursor)).y;let pds=paydaysIn(y),cur=S
   if(i<0){S.cursor=toIso(dn(y-1,6,1));pds=paydaysIn(y-1);i=pds.length-1}else if(i>=pds.length){S.cursor=toIso(dn(y+1,6,1));pds=paydaysIn(y+1);i=0}
   S.stubDay=toIso(pds[i]);render()}
 $('stubPrev').onclick=()=>stubStep(-1);$('stubNext').onclick=()=>stubStep(1);
-let xBlob=null,xName='';
+let xBlob=null,xName='',xText='';
 function saveBlob(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
-function openExport(title,msg,html,blob,name,text){xBlob=blob;xName=name;$('xTitle').textContent=title;$('xMsg').textContent=msg;$('xBody').innerHTML=html;$('xCopy').hidden=!text;$('xCopy').onclick=()=>{navigator.clipboard.writeText(text).then(()=>$('xMsg').textContent='Copied.',()=>{const t=$('xBody').querySelector('textarea');if(t){t.focus();t.select()}$('xMsg').textContent='Press Ctrl+C to copy the selected text.'})};$('xScrim').hidden=false}
+function openExport(title,msg,html,blob,name,text){xBlob=blob;xName=name;xText=text;$('xTitle').textContent=title;$('xMsg').textContent=msg;$('xBody').innerHTML=html;$('xBody').onchange=null;$('xCopy').hidden=!text;$('xCopy').onclick=()=>{navigator.clipboard.writeText(xText).then(()=>$('xMsg').textContent='Copied.',()=>{const t=$('xBody').querySelector('textarea');if(t){t.focus();t.select()}$('xMsg').textContent='Press Ctrl+C to copy the selected text.'})};$('xScrim').hidden=false}
 $('xSave').onclick=()=>{if(framed){$('xMsg').textContent='Saving files is blocked in this preview. Use the downloaded app or your GitHub site, or right-click the image / copy the text.';return}if(xBlob)saveBlob(xBlob,xName)};
 $('xClose').onclick=$('xX').onclick=()=>{$('xScrim').hidden=true};
 const csvCell=v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
@@ -1186,6 +1186,40 @@ $('csvPP').onclick=()=>{const r=range(),rows=[['Pay period','Start','End','Payda
   for(let s0=perStart(r.a);s0<=r.b;s0+=perLen()){const e=s0+perLen()-1,x=totals(s0,e),c=checkFor(s0);
     rows.push([S.ppLen?ppLabel(s0)+' '+ymd(s0).y:'Week',toIso(s0),toIso(e),toIso(c.pd),x.days,x.work,Object.values(x.leave).reduce((p,q)=>p+q,0),x.ot,Math.round(c.ot*100)/100,c.gross.toFixed(2),c.dt.toFixed(2),c.diem.toFixed(2),c.net.toFixed(2)])}
   showCsv(rows,`${slug(S.name)}-${slug(r.label)}-pay-periods.csv`)};
+/* ---------- calendar export (.ics): all-day events. UIDs are date + event type, so re-importing updates events in apps that support it ---------- */
+const ICSDEF={work:true,leave:true,off:false,pay:true,hol:true};let icsOpt=Object.assign({},ICSDEF),icsSpan='view';
+const icsEsc=s=>String(s).replace(/[\\;,]/g,c=>'\\'+c).replace(/\r?\n/g,'\\n');
+const icsDate=n=>toIso(n).replace(/-/g,'');
+const utf8=new TextEncoder();
+/* lines over 75 bytes continue on the next line after a space (RFC 5545) */
+function icsFold(l){const out=[];let cur='',b=0;for(const ch of l){const k=utf8.encode(ch).length;if(b+k>(out.length?74:75)){out.push(cur);cur='';b=0}cur+=ch;b+=k}out.push(cur);return out.join('\r\n ')}
+function icsEvents(a,b,o){const ev=[];
+  for(let n=a;n<=b;n++){const i=info(n),d=[];if(i.o&&i.o.n)d.push(i.o.n);d.push(...awNames(n).map(x=>'+ '+x));
+    if(i.work>0){if(o.work){let s=i.kind==='work'||i.kind==='vto'?'Work':i.label;s+=` ${fmtH(i.work)} h`;
+      if(i.kind==='ot'&&i.base)s=`Work ${fmtH(i.base)} h + ${fmtH(i.ot)} h OT`;if(i.vto)s+=` (VTO ${fmtH(i.vto)} h)`;ev.push({n,k:'work',s,d})}}
+    else if(i.kind!=='work'&&i.kind!=='rdo'){if(o.leave){const h=i.leave||i.vto;ev.push({n,k:'leave',s:(i.kind==='holoff'?'Holiday off':i.label)+(h?` ${fmtH(h)} h`:''),d})}}
+    else if(o.off)ev.push({n,k:'off',s:'Day off',d});
+    if(o.pay&&isPayday(n))ev.push({n,k:'pay',s:'Payday'+(S.ppLen?` (${ppLabel(periodForPayday(n))})`:''),d:[]});
+    if(o.hol&&i.hol)ev.push({n,k:'hol',s:i.hol+(i.prem?' (premium)':''),d:[]})}
+  return ev}
+function icsText(a,b,o){const ev=icsEvents(a,b,o),stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+  const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//2080 Hours//Shift calendar//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:'+icsEsc(S.name)];
+  ev.forEach(e=>{L.push('BEGIN:VEVENT',`UID:${icsDate(e.n)}-${e.k}@2080-hours`,'DTSTAMP:'+stamp,'DTSTART;VALUE=DATE:'+icsDate(e.n),'DTEND;VALUE=DATE:'+icsDate(e.n+1),'SUMMARY:'+icsEsc(e.s));
+    if(e.d.length)L.push('DESCRIPTION:'+icsEsc(e.d.join('\n')));L.push('TRANSP:'+(e.k==='work'?'OPAQUE':'TRANSPARENT'),'END:VEVENT')});
+  L.push('END:VCALENDAR');return{txt:L.map(icsFold).join('\r\n')+'\r\n',count:ev.length}}
+$('icsBtn').onclick=()=>{const r=range(),t=ymd(TODAY),yr={a:TODAY,b:dn(t.y+1,t.m,t.d)-1};
+  const box=(k,l)=>`<label class="rad"><input type="checkbox" data-ics="${k}"${icsOpt[k]?' checked':''}> ${l}</label>`;
+  openExport('Export to calendar (.ics)','',`<div class="row">${box('work','Workdays')}${box('leave','Time off &amp; leave')}${box('off','Regular days off')}${box('pay','Paydays')}${box('hol','Holidays')}</div>
+    <div class="row"><label>Dates <select id="icsSpan"><option value="view">This view: ${esc(r.label)}</option><option value="year">Next 12 months</option></select></label></div>
+    <textarea readonly id="icsTxt" style="min-height:180px"></textarea>
+    <p class="muted">Save the file, then import it. <b>Google Calendar:</b> Settings → Import &amp; export. <b>Outlook:</b> Add calendar → Upload from file. <b>iPhone / Mac:</b> open the file. Each day shows as an all-day event.<br>
+    This is a copy of your schedule as it is now, so it won’t change by itself. When your schedule changes, export again. Tip: import into its own calendar (for example “Work schedule”) so you can delete it and import a fresh copy.</p>`,null,'','x');
+  $('icsSpan').value=icsSpan;
+  const upd=()=>{document.querySelectorAll('[data-ics]').forEach(c=>{icsOpt[c.dataset.ics]=c.checked});icsSpan=$('icsSpan').value;
+    const p=icsSpan==='year'?yr:r,x=icsText(p.a,p.b,icsOpt);$('icsTxt').value=x.txt;xText=x.txt;xBlob=new Blob([x.txt],{type:'text/calendar'});
+    xName=`${slug(S.name)}-${icsSpan==='year'?'next-12-months':slug(r.label)}.ics`;
+    $('xMsg').textContent=`${x.count} events, ${fmtD(p.a)} – ${fmtD(p.b)}${S.useEdits?'':'. Pattern only: your edits are left out (switch to Actual to include them)'}.`};
+  $('xBody').onchange=upd;upd()};
 function loadH2C(){return window.html2canvas?Promise.resolve():new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc)})}
 $('imgBtn').onclick=async()=>{const b=$('imgBtn');b.disabled=true;b.textContent='Making image…';
   try{await loadH2C();document.body.classList.add('snap');const el=$('p-cal');
@@ -1204,7 +1238,147 @@ $('styRows').addEventListener('input',styEdit);$('styRows').addEventListener('ch
 $('styRows').addEventListener('click',e=>{const b=e.target.closest('[data-sreset]');if(b){delete S.styles[b.dataset.sreset];applyUserStyles();save();renderStyles()}});
 armed($('styResetAll'),()=>{S.styles={};S.brushOff=[];applyUserStyles();save();renderStyles()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('sScrim').hidden){$('sScrim').hidden=true;render()}});
-render();
+
+/* ---------- self-checks: open index.html#tests. Runs on throwaway copies of the state and never saves ---------- */
+function runTests(){
+  const keep=S,out=[],I=fromIso,hn=s=>holName(I(s));let group='';
+  const G=g=>{group=g};
+  const T=(name,fn,want)=>{let got;try{got=fn()}catch(e){got='Error: '+e.message}
+    const ok=typeof got==='number'&&typeof want==='number'?Math.abs(got-want)<0.005:JSON.stringify(got)===JSON.stringify(want);
+    out.push({group,name,ok,got,want})};
+  const fresh=o=>{S=sampleState();upgrade();Object.assign(S,o||{});for(const k in holCache)delete holCache[k]};
+  const preset=(k,o)=>{const p=PRESETS[k];fresh(Object.assign({name:p.name,anchor:p.anchor,hours:p.hours,pattern:p.pattern.slice(),preset:k,weekly:['r410','r58','f58','f410'].includes(k)},o));alignWeekly()};
+  const payS=(o,ed)=>{fresh(o);S.pay.wage=20;S.pay.deds=[];Object.assign(S.edits,ed||{})};
+  const rule=nm=>S.pay.rules.find(r=>r.name===nm);
+  /* distinct "days off/hours" combos across n pay weeks */
+  const weeks=n=>{const r=new Set();let s=pwStart(I('2026-01-05'));for(let k=0;k<n;k++,s+=7){let off=0,h=0;for(let d=0;d<7;d++){const b=baseH(s+d);h+=b;if(!b)off++}r.add(off+' off/'+h+' h')}return[...r]};
+  const offDays=s=>[0,1,2,3,4,5,6].filter(d=>!baseH(s+d));
+
+  G('Dates');
+  T('Jan 1, 1970 is day 0 and a Thursday',()=>[dn(1970,0,1),DOWS[wd(0)]],[0,'Thu']);
+  T('Oct 23, 2026 is a Friday',()=>DOWS[wd(I('2026-10-23'))],'Fri');
+  T('Leap day 2028 reads back the same',()=>toIso(I('2028-02-29')),'2028-02-29');
+  T('Feb 29, 2027 rolls over to Mar 1 (not a leap year)',()=>toIso(dn(2027,1,29)),'2027-03-01');
+  T('2026 has 365 days and 2028 has 366',()=>[dn(2027,0,1)-dn(2026,0,1),dn(2029,0,1)-dn(2028,0,1)],[365,366]);
+
+  G('Holidays');
+  fresh();
+  T('Thanksgiving 2026 is Thu Nov 26',()=>hn('2026-11-26'),'Thanksgiving');
+  T('Memorial Day 2026 is Mon May 25 (last Monday)',()=>hn('2026-05-25'),'Memorial Day');
+  T('MLK Day 2026 is Mon Jan 19',()=>hn('2026-01-19'),'MLK Day');
+  T('Labor Day 2026 is Mon Sep 7',()=>hn('2026-09-07'),'Labor Day');
+  T('July 4, 2026 (a Saturday) stays on Saturday by default',()=>[hn('2026-07-04'),hn('2026-07-03')],['Independence Day','']);
+  fresh({holObs:'observed'});
+  T('With the observed-date rule it moves to Fri Jul 3',()=>[hn('2026-07-03'),hn('2026-07-04')],['Independence Day','']);
+  T('Observed New Year’s 2028 (a Saturday) lands on Fri Dec 31, 2027',()=>hn('2027-12-31'),"New Year's Day");
+  T('Observed Christmas 2027 (a Saturday) moves to Fri Dec 24',()=>hn('2027-12-24'),'Christmas Day');
+  fresh({fedOff:['Columbus Day']});
+  T('A holiday you turned off doesn’t show',()=>hn('2026-10-12'),'');
+  fresh({customHols:[{name:'Local day',date:'2025-03-15',repeat:true}]});
+  T('A repeating custom holiday shows every year',()=>[hn('2026-03-15'),hn('2027-03-15')],['Local day','Local day']);
+
+  G('Schedules & rotations');
+  fresh();
+  T('5/8 default: Mon–Fri 8 h, weekends off',()=>[0,1,2,3,4,5,6].map(k=>baseH(I('2026-10-19')+k)),[8,8,8,8,8,0,0]);
+  T('5/8 default: 2,088 h in 2026 (261 weekdays)',()=>totals(dn(2026,0,1),dn(2026,11,31),true).work,2088);
+  T('5/8 default: 4 two-day weekends in 4 weeks',()=>totals(I('2026-10-19'),I('2026-11-15'),true).runs,{long:0,short:4,reg:0,longest:2});
+  [1,0].forEach(pw=>[0,1,-1,3,6].forEach(d=>{
+    preset('r410',{payWeekStart:pw});shiftCycle(d);
+    T(`Rotating 4/10, ${pw?'Mon':'Sun'} pay week, shifted ${d>0?'+':''}${d}: every week is 3 off / 40 h`,()=>weeks(21),['3 off/40 h'])}));
+  preset('r410');[1,1,1].forEach(d=>shiftCycle(d));
+  T('Rotating 4/10 shifted three times in a row: still 3 off / 40 h',()=>weeks(21),['3 off/40 h']);
+  preset('r58');shiftCycle(2);
+  T('Rotating 5/8 shifted +2: every week is 2 off / 40 h',()=>weeks(21),['2 off/40 h']);
+  T('A rotation that starts mid-week gets lined up with the pay weeks',()=>{const p=PRESETS.r410;fresh({pattern:p.pattern.slice(),anchor:'2026-01-07',weekly:true});alignWeekly();return weeks(21)},['3 off/40 h']);
+  T('Changing the pay week to start Sunday keeps 3 off / 40 h',()=>{preset('r410');S.payWeekStart=0;alignWeekly();return weeks(21)},['3 off/40 h']);
+  T('Older saves of a rotating 4/10 are treated as week-based',()=>{S={pattern:PRESETS.r410.pattern.slice(),anchor:'2026-01-04',name:'Rotating 4/10'};upgrade();return S.weekly},true);
+  T('Shifting +1 moves each week’s days off one day later',()=>{preset('r410');const s=pwStart(I('2026-01-05')),a=offDays(s).map(d=>(d+1)%7).sort((x,y)=>x-y);shiftCycle(1);return JSON.stringify(offDays(s))===JSON.stringify(a)},true);
+  T('Pitman (not week-based) shifted +1 slides every day by one',()=>{preset('pit');const s=I('2026-03-01'),a=[...Array(28)].map((_,k)=>baseH(s+k));shiftCycle(1);return JSON.stringify([...Array(28)].map((_,k)=>baseH(s+k+1)))===JSON.stringify(a)},true);
+  preset('f44');
+  T('4 on / 4 off: 4 long weekends in 30 days',()=>totals(I('2026-01-05'),I('2026-02-03'),true).runs,{long:4,short:0,reg:0,longest:4});
+
+  G('Pay periods & paydays');
+  fresh();
+  T('Jan 18 is still in the pay period that starts Jan 5',()=>toIso(ppStart(I('2026-01-18'))),'2026-01-05');
+  T('Dates before the first period fall in earlier periods',()=>toIso(ppStart(I('2026-01-04'))),'2025-12-22');
+  T('Jan 5, 2026 is PP 1 and Dec 21 is PP 26',()=>[ppNum(I('2026-01-05')),ppNum(I('2026-12-21'))],[1,26]);
+  T('Numbering starts over at PP 1 on Jan 4, 2027',()=>ppNum(I('2027-01-04')),1);
+  T('The Jan 5–18 period is paid Fri Jan 23',()=>toIso(paydayOf(I('2026-01-05'))),'2026-01-23');
+  T('Jan 23 is a payday and Jan 16 isn’t',()=>[isPayday(I('2026-01-23')),isPayday(I('2026-01-16'))],[true,false]);
+  T('Payday Jan 23 points back to the Jan 5 period',()=>toIso(periodForPayday(I('2026-01-23'))),'2026-01-05');
+  T('26 paydays in 2026',()=>{let c=0;for(let n=dn(2026,0,1);n<=dn(2026,11,31);n++)if(isPayday(n))c++;return c},26);
+  fresh({payWhen:'last'});
+  T('Paid in the period’s last week: Jan 5–18 is paid Fri Jan 16',()=>toIso(paydayOf(I('2026-01-05'))),'2026-01-16');
+  fresh({ppLen:0});
+  T('Weekly pay: the week of Fri Oct 23 starts Mon Oct 19 and is paid Fri Oct 30',()=>{const s=perStart(I('2026-10-23'));return[toIso(s),toIso(paydayOf(s))]},['2026-10-19','2026-10-30']);
+
+  G('Paychecks (at $20/h, Jan 5–18, 2026 unless noted)');
+  const J5=I('2026-01-05'),D21=I('2026-12-21');
+  payS();
+  T('80 regular hours = $1,600',()=>{const c=checkFor(J5);return[c.gross,c.hours,c.ot]},[1600,80,0]);
+  payS({},{'2026-01-06':{t:'ot'}});
+  T('2 h overtime after a shift is paid at 1.5×',()=>{const c=checkFor(J5);return[c.gross,c.ot]},[1660,2]);
+  payS({},{'2026-01-07':{t:'ot',h:6}});
+  T('Hours past 12 in a day are double time',()=>checkFor(J5).gross,1800);
+  payS({},{'2026-01-10':{t:'trn'}});S.pay.weekOt=true;
+  T('Weekly overtime: 48 h in one week pays 8 h at 1.5×',()=>checkFor(J5).gross,1840);
+  payS({},{'2026-01-08':{t:'vac'}});
+  T('A vacation day is paid as leave, not work',()=>{const t=totals(J5,J5+13,true);return[checkFor(J5).gross,t.work,t.leave.vac]},[1600,72,8]);
+  payS({},{'2026-01-08':{t:'vto',h:3}});
+  T('3 h of VTO comes off the check',()=>checkFor(J5).gross,1540);
+  payS({},{'2026-01-08':{t:'note',aw:['lunch']}});
+  T('A paid-lunch award adds 0.5 h',()=>checkFor(J5).gross,1610);
+  payS();rule('Premium holiday worked').on=true;
+  T('Dec 21–Jan 3: working Christmas and New Year’s pays 2.5× with that rule on',()=>checkFor(D21).gross,2080);
+  payS({},{'2026-12-25':{t:'note',bank:true}});rule('Premium holiday worked').on=true;
+  T('A banked holiday is paid straight time',()=>checkFor(D21).gross,1840);
+  payS({holidays:'off'});
+  T('With holidays set to off, a scheduled holiday is paid leave',()=>{const i=info(I('2026-12-25'),true);return[i.kind,i.work,i.leave]},['holoff',0,8]);
+  fresh();S.pay.wage=20;
+  T('Default deductions on $1,600: $543.80 taken, $1,056.20 net',()=>{const c=checkFor(J5);return[+c.dt.toFixed(2),+c.net.toFixed(2)]},[543.8,1056.2]);
+  payS();S.pay.pdDay=10;
+  T('$10/day per diem adds $100 after deductions',()=>{const c=checkFor(J5);return[c.diem,c.net]},[100,1700]);
+  payS();Object.assign(S.pay,{salary:true,annual:52000});
+  T('A $52,000 salary is $2,000 a check (26 checks)',()=>checkFor(J5).gross,2000);
+
+  G('Leave banks (2026)');
+  fresh();const Y0=dn(2026,0,1),Y1=dn(2026,11,31);
+  T('4 h per pay period earns 104 h',()=>bankYear({start:0,amt:4,per:'pp',max:'',use:[]},Y0,Y1).earned,104);
+  T('A 40 h cap stops at 40 on Feb 1 and counts the 94 h lost',()=>{const r=bankYear({start:30,amt:4,per:'pp',max:40,use:[]},Y0,Y1);return[r.end,r.earned,r.lost,toIso(r.capDay)]},[40,10,94,'2026-02-01']);
+  fresh({edits:{'2026-03-02':{t:'vac'},'2026-03-03':{t:'vac'}}});
+  T('Two vacation days take 16 h out of the bank',()=>{const r=bankYear({start:40,amt:0,per:'pp',max:'',use:['vac']},Y0,Y1);return[r.used,r.end]},[16,24]);
+
+  G('Calendar export (.ics), week of Jan 5, 2026');
+  fresh({edits:{'2026-01-08':{t:'vac',n:'Trip; beach, "fun"'},'2026-01-06':{t:'ot',n:'Long note '+'x'.repeat(150)+' é end'}}});
+  const ics=icsText(J5,J5+6,ICSDEF),unf=ics.txt.replace(/\r\n /g,'');
+  T('4 workdays + 1 vacation day + 1 payday = 6 events',()=>ics.count,6);
+  T('Workday titles say the hours',()=>[unf.includes('SUMMARY:Work 8 h\r\n'),unf.includes('SUMMARY:Work 8 h + 2 h OT'),unf.includes('SUMMARY:Vacation 8 h'),unf.includes('SUMMARY:Payday (PP 26)')],[true,true,true,true]);
+  T('Commas, semicolons and quotes in notes come through safely',()=>unf.includes('DESCRIPTION:Trip\\; beach\\, "fun"'),true);
+  T('Long lines are wrapped at 75 bytes and unwrap to the full note',()=>[ics.txt.split('\r\n').every(l=>utf8.encode(l).length<=75),unf.includes('x'.repeat(150)+' é end')],[true,true]);
+  T('All-day events end the next day, with an ID per day and type',()=>[unf.includes('DTSTART;VALUE=DATE:20260105\r\nDTEND;VALUE=DATE:20260106'),unf.includes('UID:20260105-work@2080-hours')],[true,true]);
+  T('Regular days off are left out unless you tick them',()=>[icsText(J5,J5+6,Object.assign({},ICSDEF,{off:true})).count,ics.txt.includes('Day off')],[8,false]);
+  fresh();
+  T('Christmas 2026 shows as a premium holiday',()=>icsText(D21+4,D21+4,ICSDEF).txt.includes('SUMMARY:Christmas Day (premium)'),true);
+
+  G('Saved data & backups');
+  T('An old backup with only a schedule gets every missing setting',()=>{S={pattern:[8],anchor:'2026-01-04'};upgrade();return[S.v,S.pay.rules.length,S.banks.length,S.banks.every(b=>!b.on),S.holObs,S.ppLen]},[DATA_V,7,5,true,'actual',14]);
+  T('A partial pay section keeps its wage and gets the default rules',()=>{S={pattern:[8],anchor:'2026-01-04',pay:{wage:31}};upgrade();return[S.pay.wage,S.pay.rules.length,S.pay.deds.length]},[31,7,7]);
+  T('Upgrading twice changes nothing',()=>{fresh();const a=JSON.stringify(S);upgrade();return JSON.stringify(S)===a},true);
+  T('Data from a newer version keeps its version number',()=>{S={pattern:[8],anchor:'2026-01-04',v:DATA_V+5};upgrade();return S.v},DATA_V+5);
+
+  S=keep;for(const k in holCache)delete holCache[k];
+  const bad=out.filter(r=>!r.ok),show=v=>esc(typeof v==='string'?v:JSON.stringify(v));
+  document.title=`Self-checks: ${out.length-bad.length} of ${out.length} passed`;
+  applySkin();[...document.body.children].forEach(e=>{if(e.tagName!=='SCRIPT')e.hidden=true});
+  const m=document.createElement('main');m.id='tests';m.style.cssText='max-width:900px;margin:16px auto;padding:16px;background:var(--panel);color:var(--ink);border:1px solid var(--line)';
+  let h=`<h1 style="font-size:18px;margin:0 0 4px">${bad.length?`✗ ${bad.length} of ${out.length} checks failed`:`✓ All ${out.length} checks passed`}</h1>
+    <p style="color:var(--dim);margin:0 0 12px">These check the date, holiday, rotation, pay-period, paycheck and leave-bank math against known answers. They use a sample schedule, not yours, and don’t change your saved data. <a href="#">Back to the calendar</a></p>
+    <table style="border-collapse:collapse;width:100%">`;
+  let g='';out.forEach(r=>{if(r.group!==g){g=r.group;h+=`<tr><th colspan="2" style="text-align:left;padding:10px 4px 4px;border-bottom:1px solid var(--line)">${esc(g)}</th></tr>`}
+    h+=`<tr><td style="padding:3px 6px;width:52px;font-weight:700">${r.ok?'✓ pass':'✗ FAIL'}</td><td style="padding:3px 4px">${esc(r.name)}${r.ok?'':`<div style="color:var(--dim)">got ${show(r.got)}, expected ${show(r.want)}</div>`}</td></tr>`});
+  m.innerHTML=h+'</table>';document.body.appendChild(m)}
+addEventListener('hashchange',()=>{if(location.hash==='#tests'||$('tests'))location.reload()});
+if(location.hash==='#tests')runTests();else render();
 })();
 </script>
 
