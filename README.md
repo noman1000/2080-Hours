@@ -34,6 +34,7 @@ Includes presets and customizability for rotating or fixed schedules and a paych
 - Pay week, pay period length and start date, and payday (day and timing).
 - Federal holidays (each can be turned off or marked premium) plus your own one-time or yearly holidays.
 - Comparison table of every schedule type for the year.
+- More than one schedule, such as yours and a partner's, or two shift bids you're choosing between. Each has its own pattern, shifts, time off and pay. **Compare with** on the Calendar shows the other schedule on each day, marks the days you're both off with a bar, and counts days, weekends and the longest stretch off together.
 
 ### Time Off
 - Leave banks you name yourself, each with a starting balance, an accrual rate (per year, month, pay period, day, day worked or hour worked), an optional maximum, and the day types that draw from it.
