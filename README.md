@@ -22,12 +22,13 @@ Includes presets and customizability for rotating or fixed schedules and a paych
 - Markers for paydays (red corner), the last day of a shift bid (side bar), holidays (pink), premium holidays (gold ring), and awarded pay or POAD (blue corner).
 - Cycle position controls to shift the whole rotation a day earlier or later.
 - Totals: paid hours, hours worked, workdays, days off, % of days off, weekend days off, leave and OT hours, holiday and premium holiday hours worked, and, for rotating schedules, long, regular and short weekends plus the longest stretch off.
-- Export: print, PNG image, CSV of days, CSV of pay periods, and a calendar file (.ics) of workdays, time off, paydays and holidays for Google, Apple or Outlook calendars.
+- Export: print, PNG image, CSV of days, CSV of pay periods, and a calendar file (.ics) of workdays, time off, paydays and holidays for Google, Apple or Outlook calendars. Workdays with a shift export with their start and end times; the rest are all-day events.
 
 ### Schedule pattern
 - Presets: 5/8, rotating 5/8, 4/10, rotating 4/10, rotating 9.5, 9/80, 7 on / 7 off, Pitman 2-2-3, 4 on / 4 off, or a blank cycle.
 - Weekly rotation builder where each pay week stands alone and days off move forward or back each week.
 - Click-to-edit cycle grid with per-day hours.
+- Optional shifts with start times (for example 1st, 2nd and 3rd, each with its own length). Pick a shift for each day of the cycle to build rotations like a week of 1st, then 2nd, then 3rd. Any single day can move to another shift or become a double (two shifts back to back, such as 1st + 2nd on a swap). Times show in Month view and the calendar export, and night shifts end the next morning.
 - Pay week, pay period length and start date, and payday (day and timing).
 - Federal holidays (each can be turned off or marked premium) plus your own one-time or yearly holidays.
 - Comparison table of every schedule type for the year.

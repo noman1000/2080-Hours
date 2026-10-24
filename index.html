@@ -219,7 +219,8 @@ details summary{cursor:pointer;font-weight:700;color:var(--legend)}
 .cc .lbl{font-size:11px;display:flex;justify-content:space-between;gap:4px;font-variant-numeric:tabular-nums}
 .cc button{background:transparent;border:1px dashed var(--line);border-radius:calc(var(--r)/2);cursor:pointer;font-weight:700;padding:2px;color:inherit}
 .cc input{width:100%;height:24px;min-height:24px;padding:1px 3px}
-.cc input.hid{visibility:hidden}
+.cc input.hid,.cc select.hid{visibility:hidden}
+.cc select{width:100%;height:24px;min-height:24px;padding:1px 3px}
 .cc button{height:26px}
 .cc.todaycell{outline:2px solid var(--today);outline-offset:-1px}
 .form{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px 14px}
@@ -351,6 +352,11 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
       <label>Federal holidays<select id="fHol"><option value="mark">Show, still a workday</option><option value="off">Paid day off</option></select></label>
       <label>Weekend holidays fall on<select id="fHolObs"><option value="actual">The actual date (e.g. July 4)</option><option value="observed">The observed weekday (Sat → Fri, Sun → Mon)</option></select></label>
     </div></fieldset>
+    <fieldset><legend>Shifts &amp; start times (optional)</legend>
+      <p class="muted" style="margin-bottom:8px">Name your shifts with a start time and length, for example 1st, 2nd and 3rd. Then pick a shift for each workday in the repeating cycle below, or for a single day from the day menu, which is also where you set up a double. Start and end times show in Month view, in day details and in the calendar export. Leave this empty if you don’t need times.</p>
+      <div class="tablewrap"><table><thead><tr><th>Name</th><th>Starts</th><th>Hours</th><th>Ends</th><th></th></tr></thead><tbody id="shRows"></tbody></table></div>
+      <div class="row" style="margin-top:8px"><button class="btn" id="shAdd">Add shift</button></div>
+    </fieldset>
     <fieldset><legend>Pay week &amp; pay periods</legend><div class="form">
       <label>Pay week runs<select id="fPW"></select></label>
       <label>Pay periods<select id="fPPLen"><option value="14">Every 2 weeks</option><option value="7">Every week</option><option value="0">Don't show</option></select></label>
@@ -381,6 +387,7 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
     </div><div class="row" style="margin-top:8px"><button class="btn primary" id="wBuild">Build rotation</button><span class="muted" id="wMsg"></span></div></fieldset>
     <fieldset><legend>Repeating cycle — click a day to switch work/off, type to change hours</legend>
       <p class="muted" id="cycSummary" style="margin-bottom:8px"></p>
+      <div class="row" id="cycFill" style="margin-bottom:8px" hidden></div>
       <div class="cyc" id="cyc"></div>
     </fieldset>
     <fieldset><legend id="cmpLegend">Compare schedule types</legend>
@@ -495,6 +502,7 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
       <div id="dPay" class="paybox" hidden></div>
       <p id="dInfo" class="muted"></p>
       <div class="typegrid" id="dTypes"></div>
+      <div id="dSh" class="row" hidden></div>
       <div id="dAw" class="row"></div>
       <div id="dBank" class="row" hidden></div>
       <div id="dPoad" class="row" hidden><b>POAD (pay or a day):</b><select id="dPoadM" aria-label="POAD"><option value="">No</option><option value="full">Full — all OT hours</option><option value="partial">Partial</option></select><span id="dPoadPart"><input type="number" id="dPoadH" min="0" step="0.25" style="width:64px" aria-label="POAD hours"> h</span><span class="muted" id="dPoadNote"></span></div>
@@ -593,12 +601,13 @@ if(!S.banks.some(b=>b.poad)){const r=S.banks.find(b=>b.recv&&b.on);if(r)r.poad=t
 if(!S.styles||typeof S.styles!=='object')S.styles={};if(!Array.isArray(S.brushOff))S.brushOff=[];if(!S.holidays)S.holidays='mark';if(!S.holObs)S.holObs='actual';
 if(S.longMin==null)S.longMin=4;if(S.shortMax==null)S.shortMax=2;if(S.payWeekStart==null)S.payWeekStart=1;S.weekStart=S.payWeekStart;if(S.payDow==null)S.payDow=5;if(!S.payWhen)S.payWhen='after';if(!Array.isArray(S.customHols))S.customHols=[];if(!Array.isArray(S.fedOff))S.fedOff=[];if(S.showHol==null)S.showHol=S.holidays!=='hide';if(S.holidays==='hide')S.holidays='mark';if(S.showPrem==null)S.showPrem=true;if(!Array.isArray(S.fedPrem))S.fedPrem=["New Year's Day",'Independence Day','Thanksgiving','Christmas Day'];if(S.ppLen==null)S.ppLen=14;if(!S.ppAnchor)S.ppAnchor='2026-01-05';
 if(S.weekly==null)S.weekly=['r410','r58','f58','f410'].includes(S.preset)||/pay week\)$/.test(S.name||'')||/^Rotating (4\/10|5\/8)$/.test(S.name||'');
+if(!Array.isArray(S.shifts))S.shifts=[];if(!Array.isArray(S.patShift))S.patShift=[];
 if(!(S.v>DATA_V))S.v=DATA_V}
 const pwStart=n=>n-mod(wd(n)-S.payWeekStart,7);
 try{S=JSON.parse(localStorage.getItem('shiftcal.v1'))}catch(e){S=null}
 if(!S||!Array.isArray(S.pattern)||!S.pattern.length)S=sampleState();
 upgrade();
-function rotWeeks(d){const P=S.pattern,out=[];for(let w=0;w<P.length;w+=7)for(let j=0;j<7;j++)out.push(P[w+mod(j-d,7)]);S.pattern=out}
+function rotWeeks(d){const P=S.pattern,Q=S.patShift,out=[],sh=[];for(let w=0;w<P.length;w+=7)for(let j=0;j<7;j++){out.push(P[w+mod(j-d,7)]);sh.push(Q[w+mod(j-d,7)]||'')}S.pattern=out;S.patShift=sh}
 function alignWeekly(){if(!S.weekly||S.pattern.length%7)return;const a=fromIso(S.anchor),d=mod(wd(a)-S.payWeekStart,7);if(!d)return;S.anchor=toIso(a-d);rotWeeks(d)}
 function shiftCycle(d){if(S.weekly&&S.pattern.length%7===0){alignWeekly();rotWeeks(d)}else S.anchor=toIso(fromIso(S.anchor)+d)}
 function ppStart(n){const a=fromIso(S.ppAnchor),L=S.ppLen;return a+Math.floor((n-a)/L)*L}
@@ -678,24 +687,38 @@ function holPrem(n){const e=holEntry(n);return !!(e&&e.pr&&S.showPrem)}
 /* ---------- day computation ---------- */
 const anchorN=()=>fromIso(S.anchor);
 const baseH=n=>S.pattern[mod(n-anchorN(),S.pattern.length)]||0;
+/* ---------- shifts (optional): S.shifts=[{id,name,start:'HH:MM',h}], S.patShift[i] = shift id of cycle day i, edit.sh = [ids] for that day (two = a double) ---------- */
+const shiftById=id=>S.shifts.find(s=>s.id===id)||null;
+const tMin=s=>{const[a,b]=String(s||'0:0').split(':').map(Number);return (a||0)*60+(b||0)};
+const fmtT=(m,short)=>{m=mod(Math.round(m),1440);const h=Math.floor(m/60),mm=String(m%60).padStart(2,'0'),ap=h<12?'a':'p',h12=h%12||12;return short?`${h12}${mm!=='00'?':'+mm:''}${ap}`:`${h12}:${mm} ${ap.toUpperCase()}M`};
+/* minutes from midnight of the day; back-to-back shifts merge into one stretch, and the last one absorbs any extra hours (OT, custom hours) */
+function daySegs(list,work){const segs=[];let left=work,prev=null;
+  list.forEach((s,k)=>{let a=tMin(s.start);while(prev&&a<prev.s)a+=1440;const len=k===list.length-1?left:Math.min(left,+s.h||0);left-=len;if(len<=0)return;
+    if(prev&&a===prev.e)prev.e+=len*60;else segs.push(prev={s:a,e:a+len*60})});
+  return segs}
+const segTxt=(segs,short)=>segs.map(g=>fmtT(g.s,short)+'–'+fmtT(g.e,short)).join(', ');
+const shiftLbl=i=>i.shifts.map(s=>s.name).join(' + ');
 function info(n,useEdits){
   if(useEdits===undefined)useEdits=S.useEdits;
-  const base=baseH(n),sched=base>0,hol=holName(n),prem=holPrem(n),o=useEdits?S.edits[toIso(n)]:null;
-  const r={n,base,sched,hol,prem,o,poad:0,vto:0,bank:!!(o&&o.bank),kind:sched?'work':'rdo',work:sched?base:0,leave:0,ltype:null,ot:0,label:sched?'Work':'RDO'};
+  let base=baseH(n);const sched=base>0,hol=holName(n),prem=holPrem(n),o=useEdits?S.edits[toIso(n)]:null;
+  const ps=sched?shiftById(S.patShift[mod(n-anchorN(),S.pattern.length)]):null,osh=o&&Array.isArray(o.sh)?o.sh.map(shiftById).filter(Boolean):[],shH=osh.reduce((x,s)=>x+(+s.h||0),0);
+  if(sched&&osh.length&&(!o.t||o.t==='note'))base=shH;
+  const r={n,base,sched,hol,prem,o,poad:0,vto:0,bank:!!(o&&o.bank),kind:sched?'work':'rdo',work:sched?base:0,leave:0,ltype:null,ot:0,label:sched?'Work':'RDO',shifts:[],segs:[]};
+  const done=()=>{if(r.work>0){r.shifts=osh.length?(r.kind==='ot'&&sched&&ps?[ps,...osh]:osh):ps?[ps]:[];r.segs=daySegs(r.shifts,r.work)}return r};
   if(!o||o.t==='note'){
     if(sched&&hol&&S.holidays==='off'){r.kind='holoff';r.work=0;r.leave=base;r.ltype='hol';r.label='Holiday'}
-    return r}
-  const t=TYPES[o.t];if(!t)return r;
+    return done()}
+  const t=TYPES[o.t];if(!t)return done();
   const h=o.h!=null&&o.h!==''?+o.h:null;
   r.kind=o.t;r.label=t.label;
   if(t.leave){r.work=0;r.leave=h??base;r.ltype=o.t}
-  else if(o.t==='ot'){const x=h??(sched?2:S.hours);r.ot=x;r.work=base+x}
-  else if(o.t==='trn'){r.work=h??(base||S.hours)}
-  else if(o.t==='swin'||o.t==='ft'){r.work=h??(base||S.hours)}
+  else if(o.t==='ot'){const x=h??(shH||(sched?2:S.hours));r.ot=x;r.work=base+x}
+  else if(o.t==='trn'){r.work=h??(shH||base||S.hours)}
+  else if(o.t==='swin'||o.t==='ft'){r.work=h??(shH||base||S.hours)}
   else if(o.t==='off'||o.t==='rdo'){r.work=0}
   else if(o.t==='vto'){const v=Math.min(base,h??base);r.vto=v;r.work=Math.max(0,base-v)}
   if(o.poad&&(o.t==='ot'||o.t==='trn')){const cap=r.work-Math.min(r.work,base);r.poad=o.poad==='full'?cap:Math.max(0,Math.min(cap,+o.poadH||0))}
-  return r;
+  return done();
 }
 function offRuns(a,b,isOff){const r={long:0,short:0,reg:0,longest:0};
   for(let n=a;n<=b;n++){if(!isOff(n)||isOff(n-1))continue;let L=1;while(L<120&&isOff(n+L))L++;
@@ -726,7 +749,7 @@ function range(){
 /* ---------- render calendar ---------- */
 const awNames=n=>{const o=S.edits[toIso(n)];return o&&o.aw?o.aw.map(id=>(S.pay.awards.find(a=>a.id===id)||{}).name).filter(Boolean):[]};
 const bidEnd=n=>S.bids.filter(b=>fromIso(b.end)===n).map(b=>b.name).join(', ');
-function cellTitle(i){let s=`${fmtD(i.n)} · ${i.label}`;{const be=bidEnd(i.n);if(be)s+=` · Last day of bid: ${be}`;const an=awNames(i.n);if(an.length)s+=` · + ${an.join(', ')}`;if(i.bank)s+=' · Holiday banked';if(i.poad>0)s+=` · POAD ${fmtH(i.poad)} h`}if(S.ppLen){const p=ppStart(i.n);s+=` · ${ppLabel(p)}${p===i.n?' begins':''}`}if(isPayday(i.n))s+=' · PAYDAY';const h=i.work+i.leave;if(h)s+=` ${fmtH(h)} h`;if(i.hol)s+=` · ${i.hol}${i.prem?' (premium)':''}`;if(i.o&&i.o.n)s+=` · ${i.o.n}`;return s}
+function cellTitle(i){let s=`${fmtD(i.n)} · ${i.label}`;if(i.segs.length)s+=` · ${shiftLbl(i)} ${segTxt(i.segs)}`;{const be=bidEnd(i.n);if(be)s+=` · Last day of bid: ${be}`;const an=awNames(i.n);if(an.length)s+=` · + ${an.join(', ')}`;if(i.bank)s+=' · Holiday banked';if(i.poad>0)s+=` · POAD ${fmtH(i.poad)} h`}if(S.ppLen){const p=ppStart(i.n);s+=` · ${ppLabel(p)}${p===i.n?' begins':''}`}if(isPayday(i.n))s+=' · PAYDAY';const h=i.work+i.leave;if(h)s+=` ${fmtH(h)} h`;if(i.hol)s+=` · ${i.hol}${i.prem?' (premium)':''}`;if(i.o&&i.o.n)s+=` · ${i.o.n}`;return s}
 function dayClasses(i,a,b){let c=`k-${i.kind}`;if(i.hol&&(i.kind==='work'||i.kind==='rdo'))c+=' holmark';if(i.n===TODAY)c+=' today';if(i.n<a||i.n>b)c+=' out';if(i.o&&i.o.n)c+=' note';if(isPayday(i.n))c+=' pay';if(bidEnd(i.n))c+=' bidend';if((i.o&&i.o.aw&&i.o.aw.length)||i.poad>0)c+=' aw';if(i.prem)c+=' prem';return c}
 function wkCell(s){let t=0;for(let n=s;n<s+7;n++){const i=info(n);t+=i.work+i.leave}return `<div class="wt" title="Hours paid in the pay week ${fmtD(s)} – ${fmtD(s+6)}, including days in the next or previous month"><span>WEEK HRS</span><b>${fmtH(t)} hr</b></div>`}
 function dowRow(){let h='';for(let i=0;i<7;i++)h+=`<div class="dow">${DOWS[(i+S.weekStart)%7]}</div>`;return h}
@@ -743,7 +766,7 @@ function big(y,m){
   for(let i=0;i<lead;i++)h+='<div></div>';
   for(let n=f;n<=l;n++){const i=info(n);const hrs=i.work+i.leave;
     const tag=i.kind==='vto'?`VTO ${fmtH(i.vto)}h`:i.kind==='rdo'?'RDO':i.kind==='work'?`Work ${fmtH(i.work)}h`:`${(TYPES[i.kind]||{short:'HOL'}).short}${hrs?' '+fmtH(i.kind==='ot'?i.ot:hrs)+'h':''}`;
-    h+=`<div class="bd ${dayClasses(i,f,l)}" data-d="${n}" tabindex="0" title="${esc(cellTitle(i))}"><div class="bn">${n-f+1}</div><div class="bt">${esc(tag)}</div>${i.hol?`<div class="bh">${i.prem?'★ ':''}${esc(i.hol)}${i.prem?' (premium)':''}</div>`:''}${isPayday(n)?'<div class="bpp">Payday</div>':''}${bidEnd(n)?`<div class="bh">${esc(bidEnd(n))} ends</div>`:''}${awNames(n).map(a=>`<div class="bnote">+ ${esc(a)}</div>`).join('')}${i.bank?'<div class="bnote">Holiday banked</div>':''}${i.poad>0?`<div class="bnote">POAD ${fmtH(i.poad)} h</div>`:''}${S.ppLen&&ppStart(n)===n?`<div class="bh">${ppLabel(n)} begins</div>`:''}${i.o&&i.o.n?`<div class="bnote">${esc(i.o.n)}</div>`:''}</div>`;
+    h+=`<div class="bd ${dayClasses(i,f,l)}" data-d="${n}" tabindex="0" title="${esc(cellTitle(i))}"><div class="bn">${n-f+1}</div><div class="bt">${esc(tag)}</div>${i.segs.length?`<div class="bnote">${esc(shiftLbl(i))} ${segTxt(i.segs,true)}</div>`:''}${i.hol?`<div class="bh">${i.prem?'★ ':''}${esc(i.hol)}${i.prem?' (premium)':''}</div>`:''}${isPayday(n)?'<div class="bpp">Payday</div>':''}${bidEnd(n)?`<div class="bh">${esc(bidEnd(n))} ends</div>`:''}${awNames(n).map(a=>`<div class="bnote">+ ${esc(a)}</div>`).join('')}${i.bank?'<div class="bnote">Holiday banked</div>':''}${i.poad>0?`<div class="bnote">POAD ${fmtH(i.poad)} h</div>`:''}${S.ppLen&&ppStart(n)===n?`<div class="bh">${ppLabel(n)} begins</div>`:''}${i.o&&i.o.n?`<div class="bnote">${esc(i.o.n)}</div>`:''}</div>`;
     if(wk&&mod(wd(n)-S.weekStart,7)===6)h+=wkCell(n-6)}
   if(wk){const p=mod(wd(l)-S.weekStart,7);if(p<6){for(let i=p;i<6;i++)h+='<div></div>';h+=wkCell(l-p)}}
   return h+'</div></section>'}
@@ -816,13 +839,20 @@ function renderPattern(){
   $('chRows').innerHTML=S.customHols.length?S.customHols.map((c,i)=>{const p=ymd(fromIso(c.date));
     return `<tr><td>${esc(c.name)}</td><td>${c.repeat?`Every ${MONTHS[p.m]} ${p.d}`:fmtD(fromIso(c.date))+' only'}</td><td>${c.observe?'Moves to Fri/Mon':'Stays on the date'}</td><td><input type="checkbox" data-chp="${i}" aria-label="Premium" ${c.premium?'checked':''}></td><td><button class="btn" data-chdel="${i}">Remove</button></td></tr>`}).join('')
     :'<tr><td colspan="5" class="muted">None yet. Add one above.</td></tr>';if(!$('wDate').value)$('wDate').value=toIso(TODAY);$('fHol').value=S.holidays;$('fHolObs').value=S.holObs;
+  $('shRows').innerHTML=S.shifts.length?S.shifts.map((s,i)=>`<tr><td><input type="text" data-shi="${i}" data-shf="name" value="${esc(s.name)}" aria-label="Shift name" style="width:9em"></td><td><input type="time" data-shi="${i}" data-shf="start" value="${esc(s.start)}" aria-label="${esc(s.name)} starts"></td><td><input type="number" min="0.25" max="24" step="0.25" data-shi="${i}" data-shf="h" value="${+s.h}" aria-label="${esc(s.name)} hours" style="width:5em"></td><td>${fmtT(tMin(s.start)+(+s.h||0)*60)}${tMin(s.start)+(+s.h||0)*60>=1440?' next day':''}</td><td><button class="btn" data-shdel="${i}">Remove</button></td></tr>`).join('')
+    :'<tr><td colspan="5" class="muted">No shifts yet. Days show hours only.</td></tr>';
+  const shOpts=sel=>S.shifts.map(s=>`<option value="${esc(s.id)}" ${sel===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
+  $('cycFill').hidden=!S.shifts.length;
+  if(S.shifts.length){const wk=S.pattern.length>7&&S.pattern.length%7===0?S.pattern.length/7:0,fw=$('fillW')?$('fillW').value:'all';
+    $('cycFill').innerHTML=`<b>Quick fill:</b> set the workdays in <select id="fillW" aria-label="Which days"><option value="all">the whole cycle</option>${[...Array(wk)].map((_,k)=>`<option value="${k}">week ${k+1}</option>`).join('')}</select> to <select id="fillS" aria-label="Shift">${shOpts('')}</select><button class="btn" id="fillGo">Apply</button>`;
+    if([...$('fillW').options].some(o=>o.value===fw))$('fillW').value=fw}
   const len=S.pattern.length,a=anchorN(),cs=a+Math.floor((TODAY-a)/len)*len;
   const work=S.pattern.filter(h=>h>0).length,hrs=S.pattern.reduce((x,y)=>x+y,0);
   $('cycSummary').textContent=`${len}-day cycle · ${work} workdays, ${len-work} days off · ${fmtH(hrs)} h per cycle · avg ${fmtH(hrs/len*7)} h/week · about ${fmtH(Math.round(hrs/len*365))} h/year. Dates shown are the cycle that includes today.`;
   let h='';
   S.pattern.forEach((v,i)=>{const n=cs+i;h+=`<div class="cc ${v>0?'w':'o'} ${n===TODAY?'todaycell':''}"><div class="lbl"><b>D${i+1}</b><span>${DOWS[wd(n)]} ${ymd(n).m+1}/${ymd(n).d}</span></div>
     <button data-cyc="${i}" aria-label="Day ${i+1}: ${v>0?'work':'off'}, click to switch">${v>0?'WORK':'OFF'}</button>
-    <input type="number" min="0.25" max="24" step="0.25" value="${v>0?v:''}" data-cych="${i}" aria-label="Hours on day ${i+1}" ${v>0?'':'disabled tabindex="-1" class="hid"'}></div>`});
+    <input type="number" min="0.25" max="24" step="0.25" value="${v>0?v:''}" data-cych="${i}" aria-label="Hours on day ${i+1}" ${v>0?'':'disabled tabindex="-1" class="hid"'}>${S.shifts.length?`<select data-cycs="${i}" aria-label="Shift on day ${i+1}" ${v>0?'':'disabled tabindex="-1" class="hid"'}><option value="">No shift</option>${shOpts(S.patShift[i])}</select>`:''}</div>`});
   $('cyc').innerHTML=h;
   $('lMin').value=S.longMin;$('sMax').value=S.shortMax;
   const yy=ymd(fromIso(S.cursor)).y,ya=dn(yy,0,1),yb=dn(yy,11,31);$('cmpLegend').textContent=`Compare schedule types · ${yy}`;
@@ -1024,7 +1054,7 @@ $('printBtn').onclick=()=>{
 let painting=false,painted=null;
 function paint(n){if(painted.has(n))return;painted.add(n);const k=toIso(n);
   if(S.brush==='clear')delete S.edits[k];
-  else{const prev=S.edits[k];S.edits[k]={t:S.brush,...(prev&&prev.n?{n:prev.n}:{}),...(prev&&prev.aw?{aw:prev.aw}:{}),...(prev&&prev.bank?{bank:true}:{}),...(prev&&prev.poad&&(S.brush==='ot'||S.brush==='trn')?{poad:prev.poad,poadH:prev.poadH}:{})}}
+  else{const prev=S.edits[k];S.edits[k]={t:S.brush,...(prev&&prev.n?{n:prev.n}:{}),...(prev&&prev.aw?{aw:prev.aw}:{}),...(prev&&prev.bank?{bank:true}:{}),...(prev&&prev.sh?{sh:prev.sh}:{}),...(prev&&prev.poad&&(S.brush==='ot'||S.brush==='trn')?{poad:prev.poad,poadH:prev.poadH}:{})}}
   if(!S.useEdits)S.useEdits=true;
   renderCal()}
 function cellAt(x,y){const el=document.elementFromPoint(x,y);return el&&el.closest('[data-d]')}
@@ -1036,8 +1066,8 @@ window.addEventListener('pointerup',()=>{if(painting){painting=false;render()}})
 $('cal').addEventListener('keydown',e=>{const c=e.target.closest('[data-d]');if(c&&(e.key==='Enter'||e.key===' ')){e.preventDefault();openDlg(+c.dataset.d)}});
 
 /* ---------- day dialog ---------- */
-let dlgN=null,dlgT=null,dlgAw=new Set(),dlgBank=false;
-function openDlg(n){dlgN=n;const i=info(n,false),o=S.edits[toIso(n)];dlgT=o?o.t:null;
+let dlgN=null,dlgT=null,dlgAw=new Set(),dlgBank=false,dlgSh=[];
+function openDlg(n){dlgN=n;const i=info(n,false),o=S.edits[toIso(n)];dlgT=o?o.t:null;dlgSh=o&&o.sh?o.sh.slice():[];
   $('dTitle').textContent=fmtLong(n);
   $('dInfo').textContent=`Pattern: ${i.sched?`workday, ${fmtH(i.base)} h`:'day off (RDO)'} · day ${mod(n-anchorN(),S.pattern.length)+1} of ${S.pattern.length}${i.hol?' · '+i.hol:''}`;
   $('dHours').value=o&&o.h!=null?o.h:'';$('dNote').value=o&&o.n||'';
@@ -1059,7 +1089,21 @@ function drawTypes(){
   if(dlgT&&TYPES[dlgT]){const fake={...S.edits};}
   if(!dlgT||dlgT==='note'||dlgT==='off')ph='—';else if(TYPES[dlgT].leave)ph=fmtH(i.base);else if(dlgT==='ot')ph=fmtH(i.sched?2:S.hours);else ph=fmtH(i.base||S.hours);
   $('dHoursT').textContent=dlgT==='vto'?'Hours off without pay (blank = whole shift)':dlgT==='ot'?'Extra hours':'Hours';if(dlgT==='vto')ph=fmtH(info(dlgN,false).base);
-  $('dHours').placeholder=ph;$('dHours').disabled=!dlgT||dlgT==='note'||dlgT==='off';drawPoad()}
+  $('dHours').placeholder=ph;$('dHours').disabled=!dlgT||dlgT==='note'||dlgT==='off';drawPoad();drawShift()}
+/* shift picker: shown for days you work when shifts are set up; two shifts = a double */
+const patShiftOf=n=>shiftById(S.patShift[mod(n-anchorN(),S.pattern.length)]);
+function drawShift(){const i=info(dlgN,false),el=$('dSh'),ot=dlgT==='ot';
+  el.hidden=!S.shifts.length||!(['swin','ot','trn','ft'].includes(dlgT)||((!dlgT||dlgT==='note')&&i.sched));if(el.hidden)return;
+  const ps=i.sched?patShiftOf(dlgN):null,opt=sel=>S.shifts.map(s=>`<option value="${esc(s.id)}" ${sel===s.id?'selected':''}>${esc(s.name)} (${fmtT(tMin(s.start),true)}, ${fmtH(+s.h)} h)</option>`).join('');
+  el.innerHTML=`<b>${ot?'Extra shift:':'Shift:'}</b><select id="dSh1" aria-label="Shift"><option value="">${esc(ot?'None (hours added after your shift)':ps?`Pattern’s shift (${ps.name})`:'No shift')}</option>${opt(dlgSh[0])}</select>`+
+    (ot?'':`<label>Double with <select id="dSh2" aria-label="Second shift"><option value="">No double</option>${opt(dlgSh[1])}</select></label>`)+'<span class="muted" id="dShNote"></span>';
+  shiftNote()}
+function shiftNote(){const L=dlgSh.map(shiftById).filter(Boolean),h=L.reduce((x,s)=>x+(+s.h||0),0);let t='';
+  if(L.length>1)t=dlgT==='swin'?`Double: ${fmtH(h)} h, paid at straight time by the swap rule.`:`Double: ${fmtH(h)} h. If you’re covering for a coworker, pick Swap in (work) so it pays straight time.`;
+  else if(L.length)t=`${L[0].name}: ${segTxt(daySegs(L,+L[0].h||0))}`;
+  $('dShNote').textContent=t;if(h>0&&!$('dHours').disabled)$('dHours').placeholder=fmtH(h)}
+$('dSh').addEventListener('change',()=>{const v1=$('dSh1').value,v2=$('dSh2')?$('dSh2').value:'',ps=patShiftOf(dlgN);
+  dlgSh=v2?[v1||(ps?ps.id:''),v2].filter(Boolean):v1?[v1]:[];shiftNote()});
 function drawPoad(){const show=dlgT==='ot'||dlgT==='trn';$('dPoad').hidden=!show;if(!show)return;const m=$('dPoadM').value;$('dPoadPart').hidden=m!=='partial';
   const rb=S.banks.find(b=>b.poad&&b.on);$('dPoadNote').textContent=m?`POAD hours pay straight time and add the same hours to ${rb?rb.name:'a bank (pick one under Gets POAD on Time Off)'}.`:'Hours past your normal shift are paid by your OT rules.'}
 $('dPoadM').addEventListener('change',drawPoad);
@@ -1068,8 +1112,9 @@ $('dAw').addEventListener('change',e=>{const id=e.target.dataset.aw;if(id==null)
 $('dTypes').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(b){dlgT=b.dataset.t||null;drawTypes()}});
 function closeDlg(){$('scrim').hidden=true;dlgN=null}
 $('dSave').onclick=()=>{const k=toIso(dlgN),note=$('dNote').value.trim(),h=$('dHours').value;
-  if(!dlgT&&!note&&!dlgAw.size&&!dlgBank)delete S.edits[k];
-  else{const o={t:dlgT||'note'};if(h!==''&&!$('dHours').disabled)o.h=+h;if(note)o.n=note;if(dlgAw.size)o.aw=[...dlgAw];if(dlgBank&&holEntry(dlgN,true))o.bank=true;{const pm=$('dPoadM').value;if(pm&&(dlgT==='ot'||dlgT==='trn')){o.poad=pm;if(pm==='partial')o.poadH=+$('dPoadH').value||0}}S.edits[k]=o;S.useEdits=true}
+  const sh=$('dSh').hidden?[]:dlgSh;
+  if(!dlgT&&!note&&!dlgAw.size&&!dlgBank&&!sh.length)delete S.edits[k];
+  else{const o={t:dlgT||'note'};if(h!==''&&!$('dHours').disabled)o.h=+h;if(note)o.n=note;if(sh.length)o.sh=[...sh];if(dlgAw.size)o.aw=[...dlgAw];if(dlgBank&&holEntry(dlgN,true))o.bank=true;{const pm=$('dPoadM').value;if(pm&&(dlgT==='ot'||dlgT==='trn')){o.poad=pm;if(pm==='partial')o.poadH=+$('dPoadH').value||0}}S.edits[k]=o;S.useEdits=true}
   closeDlg();render()};
 $('dClear').onclick=()=>{delete S.edits[toIso(dlgN)];closeDlg();render()};
 $('dCancel').onclick=closeDlg;$('dX').onclick=closeDlg;
@@ -1078,14 +1123,14 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('scrim').hidden)
 
 /* ---------- pattern events ---------- */
 $('preset').onchange=e=>{$('presetNote').textContent=PRESETS[e.target.value].note};
-$('loadPreset').onclick=()=>{const k=$('preset').value,p=PRESETS[k];S.preset=k;S.weekly=['r410','r58','f58','f410'].includes(k);S.name=p.name;S.anchor=(k==='r410'||k==='r58')?toIso(pwStart(TODAY)):p.anchor;S.hours=p.hours;S.pattern=p.pattern.slice();render()};
+$('loadPreset').onclick=()=>{const k=$('preset').value,p=PRESETS[k];S.preset=k;S.weekly=['r410','r58','f58','f410'].includes(k);S.name=p.name;S.anchor=(k==='r410'||k==='r58')?toIso(pwStart(TODAY)):p.anchor;S.hours=p.hours;S.pattern=p.pattern.slice();S.patShift=[];render()};
 $('fPW').onchange=e=>{S.payWeekStart=+e.target.value;S.weekStart=S.payWeekStart;render()};
 $('fPPLen').onchange=e=>{S.ppLen=+e.target.value;render()};
 $('fPPA').onchange=e=>{if(e.target.value){S.ppAnchor=e.target.value;render()}};
 $('wBuild').onclick=()=>{const off=Math.max(1,Math.min(6,Math.round(+$('wOff').value||3))),h=+$('wHours').value||S.hours,shift=+$('wShift').value;
   const start=pwStart(fromIso($('wDate').value||toIso(TODAY))),p0=mod(+$('wFirst').value-S.payWeekStart,7),weeks=shift===0?1:7,pt=[];
   for(let k=0;k<weeks;k++)for(let i=0;i<7;i++)pt.push(mod(i-(p0+k*shift),7)<off?0:h);
-  S.pattern=pt;S.anchor=toIso(start);S.hours=h;S.preset='';S.weekly=true;S.name=`Rotating ${7-off}/${fmtH(h)} (${DOWS[S.payWeekStart]}–${DOWS[(S.payWeekStart+6)%7]} pay week)`;
+  S.pattern=pt;S.patShift=[];S.anchor=toIso(start);S.hours=h;S.preset='';S.weekly=true;S.name=`Rotating ${7-off}/${fmtH(h)} (${DOWS[S.payWeekStart]}–${DOWS[(S.payWeekStart+6)%7]} pay week)`;
   $('wMsg').textContent=`Built a ${pt.length}-day cycle starting ${fmtD(start)}.`;render()};
 $('fName').oninput=e=>{S.name=e.target.value||'My schedule';$('schedName').textContent='— '+S.name;save()};
 $('fAnchor').onchange=e=>{if(e.target.value){S.anchor=e.target.value;render()}};
@@ -1093,7 +1138,7 @@ $('aBack').onclick=()=>{shiftCycle(-1);render()};
 $('aFwd').onclick=()=>{shiftCycle(1);render()};
 $('fHours').onchange=e=>{const v=+e.target.value;if(v>0){S.hours=v;render()}};
 $('setLen').onclick=()=>{const L=Math.max(1,Math.min(140,Math.round(+$('fLen').value||7)));
-  if(L>S.pattern.length)S.pattern=S.pattern.concat(new Array(L-S.pattern.length).fill(0));else S.pattern=S.pattern.slice(0,L);render()};
+  if(L>S.pattern.length)S.pattern=S.pattern.concat(new Array(L-S.pattern.length).fill(0));else S.pattern=S.pattern.slice(0,L);S.patShift=S.patShift.slice(0,L);render()};
 $('fPayDow').onchange=e=>{S.payDow=+e.target.value;render()};
 $('lMin').onchange=e=>{const v=Math.round(+e.target.value);if(v>=3){S.longMin=v;if(S.shortMax>=v)S.shortMax=v-1;render()}};
 $('sMax').onchange=e=>{const v=Math.round(+e.target.value);if(v>=1){S.shortMax=v;if(S.longMin<=v)S.longMin=v+1;render()}};
@@ -1107,8 +1152,19 @@ $('chAdd').onclick=()=>{const nm=$('chName').value.trim(),d=$('chDate').value;if
 $('chRows').addEventListener('click',e=>{const b=e.target.closest('[data-chdel]');if(b){S.customHols.splice(+b.dataset.chdel,1);render()}});
 $('fHol').onchange=e=>{S.holidays=e.target.value;render()};
 $('fHolObs').onchange=e=>{S.holObs=e.target.value;render()};
-$('cyc').addEventListener('click',e=>{const b=e.target.closest('[data-cyc]');if(!b)return;const i=+b.dataset.cyc;S.pattern[i]=S.pattern[i]>0?0:S.hours;render()});
-$('cyc').addEventListener('change',e=>{const t=e.target.closest('[data-cych]');if(!t)return;const v=+t.value;if(v>0){S.pattern[+t.dataset.cych]=v;render()}});
+$('cyc').addEventListener('click',e=>{const b=e.target.closest('[data-cyc]');if(!b)return;const i=+b.dataset.cyc;S.pattern[i]=S.pattern[i]>0?0:+(shiftById(S.patShift[i])||{}).h||S.hours;render()});
+$('cyc').addEventListener('change',e=>{const c=e.target.closest('[data-cycs]');if(c){const i=+c.dataset.cycs,s=shiftById(c.value);S.patShift[i]=c.value;if(s&&+s.h>0)S.pattern[i]=+s.h;render();return}
+  const t=e.target.closest('[data-cych]');if(!t)return;const v=+t.value;if(v>0){S.pattern[+t.dataset.cych]=v;render()}});
+$('cycFill').addEventListener('click',e=>{if(e.target.id!=='fillGo')return;const s=shiftById($('fillS').value),w=$('fillW').value;if(!s)return;
+  S.pattern.forEach((v,i)=>{if(v>0&&(w==='all'||Math.floor(i/7)===+w)){S.patShift[i]=s.id;if(+s.h>0)S.pattern[i]=+s.h}});render()});
+const SHDEF=[['1st','07:00'],['2nd','15:00'],['3rd','23:00']];
+$('shAdd').onclick=()=>{const k=S.shifts.length,d=SHDEF[k]||[`Shift ${k+1}`,'07:00'];let id;do id='s'+Math.random().toString(36).slice(2,8);while(shiftById(id));S.shifts.push({id,name:d[0],start:d[1],h:S.hours});render()};
+$('shRows').addEventListener('change',e=>{const t=e.target,i=t.dataset.shi;if(i==null)return;const s=S.shifts[+i],f=t.dataset.shf;
+  if(f==='name')s.name=t.value.trim()||s.name;else if(f==='start'){if(t.value)s.start=t.value}
+  else{const v=+t.value;if(v>0){s.h=v;S.pattern.forEach((p,j)=>{if(p>0&&S.patShift[j]===s.id)S.pattern[j]=v})}}
+  render()});
+$('shRows').addEventListener('click',e=>{const b=e.target.closest('[data-shdel]');if(!b)return;const id=S.shifts[+b.dataset.shdel].id;S.shifts.splice(+b.dataset.shdel,1);
+  S.patShift=S.patShift.map(x=>x===id?'':x);Object.values(S.edits).forEach(o=>{if(o.sh){o.sh=o.sh.filter(x=>x!==id);if(!o.sh.length)delete o.sh}});render()});
 
 /* ---------- edits events ---------- */
 $('rApply').onclick=()=>{const a=$('rFrom').value,b=$('rTo').value;if(!a||!b){$('rMsg').textContent='Pick both dates.';return}
@@ -1179,8 +1235,8 @@ const csvCell=v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/
 const toCsv=rows=>rows.map(r=>r.map(csvCell).join(',')).join('\r\n');
 const slug=s=>s.replace(/[^\w-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
 function showCsv(rows,name){const txt=toCsv(rows);openExport('Export CSV',`${rows.length-1} rows. Opens in Excel, Google Sheets or Numbers.`,`<textarea readonly style="min-height:260px">${esc(txt)}</textarea>`,new Blob(['\ufeff'+txt],{type:'text/csv'}),name,txt)}
-$('csvDays').onclick=()=>{const r=range(),rows=[['Date','Day','Pattern','Pattern hours','Status','Hours worked','Leave type','Leave hours','OT hours','VTO hours','POAD hours','Holiday','Premium','Payday','Pay period','Awarded pay','Holiday banked','Note']];
-  for(let n=r.a;n<=r.b;n++){const i=info(n),o=i.o||{};rows.push([toIso(n),DOWS[wd(n)],i.sched?'Work':'RDO',i.base,i.label,i.work,i.ltype?TYPES[i.ltype].label:'',i.leave,i.ot,i.vto||0,i.poad||0,i.hol,i.prem?'Yes':'',isPayday(n)?'Yes':'',S.ppLen?ppLabel(ppStart(n)):'',awNames(n).join('; '),i.bank?'Yes':'',o.n||''])}
+$('csvDays').onclick=()=>{const r=range(),rows=[['Date','Day','Pattern','Pattern hours','Status','Hours worked','Leave type','Leave hours','OT hours','VTO hours','POAD hours','Holiday','Premium','Payday','Pay period','Awarded pay','Holiday banked','Note','Shift','Start','End']];
+  for(let n=r.a;n<=r.b;n++){const i=info(n),o=i.o||{};rows.push([toIso(n),DOWS[wd(n)],i.sched?'Work':'RDO',i.base,i.label,i.work,i.ltype?TYPES[i.ltype].label:'',i.leave,i.ot,i.vto||0,i.poad||0,i.hol,i.prem?'Yes':'',isPayday(n)?'Yes':'',S.ppLen?ppLabel(ppStart(n)):'',awNames(n).join('; '),i.bank?'Yes':'',o.n||'',shiftLbl(i),i.segs.length?fmtT(i.segs[0].s):'',i.segs.length?fmtT(i.segs[i.segs.length-1].e):''])}
   showCsv(rows,`${slug(S.name)}-${slug(r.label)}-days.csv`)};
 $('csvPP').onclick=()=>{const r=range(),rows=[['Pay period','Start','End','Payday','Workdays','Hours worked','Leave hours','OT hours','Hours above 1x','Gross','Deductions','Per diem','Net']];
   for(let s0=perStart(r.a);s0<=r.b;s0+=perLen()){const e=s0+perLen()-1,x=totals(s0,e),c=checkFor(s0);
@@ -1190,13 +1246,16 @@ $('csvPP').onclick=()=>{const r=range(),rows=[['Pay period','Start','End','Payda
 const ICSDEF={work:true,leave:true,off:false,pay:true,hol:true};let icsOpt=Object.assign({},ICSDEF),icsSpan='view';
 const icsEsc=s=>String(s).replace(/[\\;,]/g,c=>'\\'+c).replace(/\r?\n/g,'\\n');
 const icsDate=n=>toIso(n).replace(/-/g,'');
+/* local "floating" time: the same clock time in whatever time zone the calendar is in */
+const icsTime=(n,m)=>{m=Math.round(m);const p=x=>String(x).padStart(2,'0');return icsDate(n+Math.floor(m/1440))+'T'+p(Math.floor(mod(m,1440)/60))+p(mod(m,60))+'00'};
 const utf8=new TextEncoder();
 /* lines over 75 bytes continue on the next line after a space (RFC 5545) */
 function icsFold(l){const out=[];let cur='',b=0;for(const ch of l){const k=utf8.encode(ch).length;if(b+k>(out.length?74:75)){out.push(cur);cur='';b=0}cur+=ch;b+=k}out.push(cur);return out.join('\r\n ')}
 function icsEvents(a,b,o){const ev=[];
   for(let n=a;n<=b;n++){const i=info(n),d=[];if(i.o&&i.o.n)d.push(i.o.n);d.push(...awNames(n).map(x=>'+ '+x));
     if(i.work>0){if(o.work){let s=i.kind==='work'||i.kind==='vto'?'Work':i.label;s+=` ${fmtH(i.work)} h`;
-      if(i.kind==='ot'&&i.base)s=`Work ${fmtH(i.base)} h + ${fmtH(i.ot)} h OT`;if(i.vto)s+=` (VTO ${fmtH(i.vto)} h)`;ev.push({n,k:'work',s,d})}}
+      if(i.kind==='ot'&&i.base)s=`Work ${fmtH(i.base)} h + ${fmtH(i.ot)} h OT`;if(i.vto)s+=` (VTO ${fmtH(i.vto)} h)`;if(i.shifts.length)s+=` · ${shiftLbl(i)}`;
+      if(i.segs.length)i.segs.forEach((g,x)=>ev.push({n,k:x?'work'+(x+1):'work',s,d,g}));else ev.push({n,k:'work',s,d})}}
     else if(i.kind!=='work'&&i.kind!=='rdo'){if(o.leave){const h=i.leave||i.vto;ev.push({n,k:'leave',s:(i.kind==='holoff'?'Holiday off':i.label)+(h?` ${fmtH(h)} h`:''),d})}}
     else if(o.off)ev.push({n,k:'off',s:'Day off',d});
     if(o.pay&&isPayday(n))ev.push({n,k:'pay',s:'Payday'+(S.ppLen?` (${ppLabel(periodForPayday(n))})`:''),d:[]});
@@ -1204,7 +1263,7 @@ function icsEvents(a,b,o){const ev=[];
   return ev}
 function icsText(a,b,o){const ev=icsEvents(a,b,o),stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
   const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//2080 Hours//Shift calendar//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-CALNAME:'+icsEsc(S.name)];
-  ev.forEach(e=>{L.push('BEGIN:VEVENT',`UID:${icsDate(e.n)}-${e.k}@2080-hours`,'DTSTAMP:'+stamp,'DTSTART;VALUE=DATE:'+icsDate(e.n),'DTEND;VALUE=DATE:'+icsDate(e.n+1),'SUMMARY:'+icsEsc(e.s));
+  ev.forEach(e=>{L.push('BEGIN:VEVENT',`UID:${icsDate(e.n)}-${e.k}@2080-hours`,'DTSTAMP:'+stamp,...(e.g?['DTSTART:'+icsTime(e.n,e.g.s),'DTEND:'+icsTime(e.n,e.g.e)]:['DTSTART;VALUE=DATE:'+icsDate(e.n),'DTEND;VALUE=DATE:'+icsDate(e.n+1)]),'SUMMARY:'+icsEsc(e.s));
     if(e.d.length)L.push('DESCRIPTION:'+icsEsc(e.d.join('\n')));L.push('TRANSP:'+(e.k==='work'?'OPAQUE':'TRANSPARENT'),'END:VEVENT')});
   L.push('END:VCALENDAR');return{txt:L.map(icsFold).join('\r\n')+'\r\n',count:ev.length}}
 $('icsBtn').onclick=()=>{const r=range(),t=ymd(TODAY),yr={a:TODAY,b:dn(t.y+1,t.m,t.d)-1};
@@ -1348,6 +1407,30 @@ function runTests(){
   fresh({edits:{'2026-03-02':{t:'vac'},'2026-03-03':{t:'vac'}}});
   T('Two vacation days take 16 h out of the bank',()=>{const r=bankYear({start:40,amt:0,per:'pp',max:'',use:['vac']},Y0,Y1);return[r.used,r.end]},[16,24]);
 
+  G('Shifts & doubles (1st 6a 8 h, 2nd 2p 8 h, 3rd 10p 10 h)');
+  const SH=[{id:'a',name:'1st',start:'06:00',h:8},{id:'b',name:'2nd',start:'14:00',h:8},{id:'c',name:'2nd (10)',start:'14:00',h:10},{id:'d',name:'3rd',start:'22:00',h:10}];
+  const shS=ed=>{payS({},ed);S.shifts=JSON.parse(JSON.stringify(SH));S.patShift=['','a','a','a','a','a','']};
+  const segsOf=s=>segTxt(info(I(s),true).segs,true);
+  shS();
+  T('A 1st-shift day runs 6a–2p',()=>segsOf('2026-01-05'),'6a–2p');
+  T('Days off and days without a shift have no times',()=>[segsOf('2026-01-10'),(S.patShift=[],segsOf('2026-01-05'))],['','']);
+  shS({'2026-01-06':{t:'swin',sh:['a','b']}});
+  T('A 1st + 2nd double is 16 h, 6a–10p',()=>{const i=info(I('2026-01-06'),true);return[i.work,segsOf('2026-01-06'),shiftLbl(i)]},[16,'6a–10p','1st + 2nd']);
+  T('A double on a swap pays straight time',()=>{const c=checkFor(J5);return[c.gross,c.ot]},[1760,0]);
+  shS({'2026-01-07':{t:'note',sh:['d']}});
+  T('Moving to 3rd shift for a day: 10 h, 10p–8a the next morning',()=>[info(I('2026-01-07'),true).work,segsOf('2026-01-07')],[10,'10p–8a']);
+  T('A longer shift you’re moved to isn’t counted as overtime',()=>{const c=checkFor(J5);return[c.gross,c.ot]},[1640,0]);
+  shS({'2026-01-08':{t:'ot'}});
+  T('2 h overtime after 1st shift ends at 4p',()=>segsOf('2026-01-08'),'6a–4p');
+  shS({'2026-01-08':{t:'ot',sh:['b']}});
+  T('Overtime as a whole extra 2nd shift: 16 h, 6a–10p, 1.5× to 12 h then double time',()=>{const c=checkFor(J5);return[info(I('2026-01-08'),true).work,segsOf('2026-01-08'),c.gross]},[16,'6a–10p',1880]);
+  const rot=weekly=>{fresh({anchor:'2026-01-05',pattern:pat('WWWWWOO'.repeat(3),8),weekly});S.shifts=JSON.parse(JSON.stringify(SH));S.patShift=[...Array(21)].map((_,k)=>'abd'[Math.floor(k/7)])};
+  const wkShifts=()=>[0,1,2].map(w=>[...new Set([0,1,2,3,4,5,6].map(d=>info(I('2026-01-05')+w*7+d,true)).filter(i=>i.work>0).map(shiftLbl))]);
+  rot(false);
+  T('A 1st/2nd/3rd weekly rotation starts 6a, 2p, 10p, then repeats',()=>['2026-01-05','2026-01-12','2026-01-19','2026-01-26'].map(s=>info(I(s),true).segs[0].s),[360,840,1320,360]);
+  rot(true);shiftCycle(1);
+  T('Shifting a week-based rotation keeps each week on its shift',()=>wkShifts(),[['1st'],['2nd'],['3rd']]);
+
   G('Calendar export (.ics), week of Jan 5, 2026');
   fresh({edits:{'2026-01-08':{t:'vac',n:'Trip; beach, "fun"'},'2026-01-06':{t:'ot',n:'Long note '+'x'.repeat(150)+' é end'}}});
   const ics=icsText(J5,J5+6,ICSDEF),unf=ics.txt.replace(/\r\n /g,'');
@@ -1357,11 +1440,14 @@ function runTests(){
   T('Long lines are wrapped at 75 bytes and unwrap to the full note',()=>[ics.txt.split('\r\n').every(l=>utf8.encode(l).length<=75),unf.includes('x'.repeat(150)+' é end')],[true,true]);
   T('All-day events end the next day, with an ID per day and type',()=>[unf.includes('DTSTART;VALUE=DATE:20260105\r\nDTEND;VALUE=DATE:20260106'),unf.includes('UID:20260105-work@2080-hours')],[true,true]);
   T('Regular days off are left out unless you tick them',()=>[icsText(J5,J5+6,Object.assign({},ICSDEF,{off:true})).count,ics.txt.includes('Day off')],[8,false]);
+  shS({'2026-01-06':{t:'swin',sh:['a','b']},'2026-01-07':{t:'note',sh:['d']}});
+  T('Shift days export with start and end times; nights end the next morning',()=>{const u=icsText(J5,J5+6,ICSDEF).txt.replace(/\r\n /g,'');
+    return[u.includes('DTSTART:20260105T060000\r\nDTEND:20260105T140000'),u.includes('DTSTART:20260106T060000\r\nDTEND:20260106T220000'),u.includes('DTSTART:20260107T220000\r\nDTEND:20260108T080000'),u.includes('SUMMARY:Swap in (work) 16 h · 1st + 2nd')]},[true,true,true,true]);
   fresh();
   T('Christmas 2026 shows as a premium holiday',()=>icsText(D21+4,D21+4,ICSDEF).txt.includes('SUMMARY:Christmas Day (premium)'),true);
 
   G('Saved data & backups');
-  T('An old backup with only a schedule gets every missing setting',()=>{S={pattern:[8],anchor:'2026-01-04'};upgrade();return[S.v,S.pay.rules.length,S.banks.length,S.banks.every(b=>!b.on),S.holObs,S.ppLen]},[DATA_V,7,5,true,'actual',14]);
+  T('An old backup with only a schedule gets every missing setting',()=>{S={pattern:[8],anchor:'2026-01-04'};upgrade();return[S.v,S.pay.rules.length,S.banks.length,S.banks.every(b=>!b.on),S.holObs,S.ppLen,S.shifts,S.patShift]},[DATA_V,7,5,true,'actual',14,[],[]]);
   T('A partial pay section keeps its wage and gets the default rules',()=>{S={pattern:[8],anchor:'2026-01-04',pay:{wage:31}};upgrade();return[S.pay.wage,S.pay.rules.length,S.pay.deds.length]},[31,7,7]);
   T('Upgrading twice changes nothing',()=>{fresh();const a=JSON.stringify(S);upgrade();return JSON.stringify(S)===a},true);
   T('Data from a newer version keeps its version number',()=>{S={pattern:[8],anchor:'2026-01-04',v:DATA_V+5};upgrade();return S.v},DATA_V+5);

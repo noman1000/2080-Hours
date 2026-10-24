@@ -30,6 +30,7 @@ The whole app is an IIFE with a single state object `S`, saved by `save()` on ev
   - `h` overrides hours, `n` is a note, and `aw` is a list of awarded-pay ids.
   - `bank` means a holiday was banked instead of paid at holiday rates.
   - `poad` is `'full'|'partial'` (pay or a day), with `poadH` holding the partial hours.
+- **Shifts (optional):** `S.shifts[]` holds `{id, name, start:'HH:MM', h}`. `S.patShift[i]` is the shift id for cycle day `i`, parallel to `S.pattern`: `rotWeeks()` rotates both, and anything that replaces the pattern (presets, the builder) resets it. A day edit can carry `sh: [ids]` (two ids = a double). `info(n)` returns `shifts` and `segs` (start/end minutes from that day's midnight, which go past 1440 for night shifts). With no shifts, days have no times and everything is all-day.
 - **`info(n)`** is the single source of truth for a day: kind, work hours, leave hours/type, OT, VTO, POAD, holiday, premium. Calendar, totals, pay, CSV and banks all read from it. Change behavior there, not in the views.
 - **Holidays:** `FED` (federal, `fobs` applies the actual-vs-observed setting), `S.customHols`, `S.fedOff`, `S.fedPrem`. Lookup goes through `hols(y)` (cached in `holCache`, cleared each render), then `holEntry`/`holName`/`holPrem`.
 - **Pay periods / paydays:** `S.payWeekStart`, `S.ppLen` (14/7/0), `S.ppAnchor`, `S.payDow`, `S.payWhen`. Helpers: `pwStart`, `ppStart`, `perStart`, `perLen`, `isPayday`, `periodForPayday`, `paydayOf`.
