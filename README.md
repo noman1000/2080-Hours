@@ -17,6 +17,7 @@ Includes presets and customizability for rotating or fixed schedules and a paych
 
 ### Calendar
 - Month, Quarter, Year and Shift bid views, with weeks laid out from your pay week's first day with custom pay week start days.
+- Extra months before and after Quarter, Year and Shift bid views (up to 6 each way), like a 13–14 month planner book. Extra months have a dashed border, show in print and exports, and aren't counted in the totals.
 - **Actual** view (with your edits) or **Pattern only** (the plain rotation projected forward).
 - Click a day to edit it, or pick a brush and drag across days: Vacation, PTO, Sick, Holiday off, Floating holiday, Banked time off, Training, Field trip, Extra shift / OT, Swap in, Swap out.
 - Markers for paydays (red corner), the last day of a shift bid (side bar), holidays (pink), premium holidays (gold ring), and awarded pay or POAD (blue corner).
