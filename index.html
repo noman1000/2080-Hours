@@ -99,7 +99,7 @@ legend{color:var(--legend);font-weight:700;padding:0 4px;font-size:12px;letter-s
 .tabrow .tabs{flex:1}
 .hist{display:flex;gap:4px;padding:8px 8px 4px}
 .savewarn{margin:8px 8px 0;padding:4px 8px;background:var(--ot);color:var(--otink);font-weight:700}
-.btn:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible,.d:focus-visible{outline:2px dotted var(--pick);outline-offset:1px}
+.btn:focus-visible,.tab:focus-visible,input:focus-visible,select:focus-visible,.d:focus-visible,.bd:focus-visible{outline:2px dotted var(--pick);outline-offset:1px}
 input[type=text],input[type=date],input[type=number],select,textarea{background:var(--field);border:var(--bw) solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);border-radius:var(--r);padding:3px 5px;min-height:26px}
 :root:not(.skin-classic) :is(input[type=text],input[type=date],input[type=number],select,textarea){border-color:var(--line)}
 input[type=number]{width:64px}
@@ -341,7 +341,7 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
         <option value="classic">Classic (teal)</option><option value="modern">Modern — follow system</option><option value="light">Modern — light</option><option value="dark">Modern — dark</option><option value="night">Night shift</option></select><button class="btn" id="styBtn">Day colors &amp; text…</button></div></fieldset>
     </div>
     <div class="notice noprint" id="printNote" hidden></div>
-    <fieldset class="noprint" id="brushBox"><legend>Click a day to edit it, or pick a brush and click/drag across days</legend><div class="brushes" id="brushes"></div></fieldset>
+    <fieldset class="noprint" id="brushBox"><legend>Click a day to edit it, or pick a brush and click/drag across days. Keyboard: arrow keys move between days, Enter applies the brush, Shift+arrows paint as you go</legend><div class="brushes" id="brushes"></div></fieldset>
     <div class="printonly" id="printHead"></div>
     <div id="cal"></div>
     <fieldset><legend id="statsLegend">Totals</legend><div class="stats" id="stats"></div></fieldset>
@@ -785,7 +785,7 @@ function mini(y,m,a,b,extra){
   const f=dn(y,m,1),l=dn(y,m+1,0),lead=mod(wd(f)-S.weekStart,7);
   let h=`<section class="mon${extra?' extra':''}"${extra?' title="Extra month, not counted in the totals"':''}><h3><span>${MONTHS[m]} ${y}</span><b>HOURS:${fmtH(monthHours(y,m,a,b))}</b></h3><div class="mgrid">${dowRow()}`;
   for(let i=0;i<lead;i++)h+='<div class="d blank"></div>';
-  for(let n=f;n<=l;n++){const i=info(n);h+=`<div class="d ${dayClasses(i,a,b)}" data-d="${n}" tabindex="0" title="${esc(cellTitle(i))}">${n-f+1}</div>`}
+  for(let n=f;n<=l;n++){const i=info(n);h+=`<div class="d ${dayClasses(i,a,b)}" data-d="${n}" tabindex="0" role="button" aria-label="${esc(cellTitle(i))}" title="${esc(cellTitle(i))}">${n-f+1}</div>`}
   return h+'</div></section>'}
 function big(y,m){
   const f=dn(y,m,1),l=dn(y,m+1,0),lead=mod(wd(f)-S.weekStart,7),wk=S.weekStart===S.payWeekStart;
@@ -793,7 +793,7 @@ function big(y,m){
   for(let i=0;i<lead;i++)h+='<div></div>';
   for(let n=f;n<=l;n++){const i=info(n);const hrs=i.work+i.leave;
     const tag=i.kind==='vto'?`VTO ${fmtH(i.vto)}h`:i.kind==='rdo'?'RDO':i.kind==='work'?`Work ${fmtH(i.work)}h`:`${(TYPES[i.kind]||{short:'HOL'}).short}${hrs?' '+fmtH(i.kind==='ot'?i.ot:hrs)+'h':''}`;
-    h+=`<div class="bd ${dayClasses(i,f,l)}" data-d="${n}" tabindex="0" title="${esc(cellTitle(i))}"><div class="bn">${n-f+1}</div><div class="bt">${esc(tag)}</div>${i.segs.length?`<div class="bnote">${esc(shiftLbl(i))} ${segTxt(i.segs,true)}</div>`:''}${i.hol?`<div class="bh">${i.prem?'★ ':''}${esc(i.hol)}${i.prem?' (premium)':''}</div>`:''}${isPayday(n)?'<div class="bpp">Payday</div>':''}${bidEnd(n)?`<div class="bh">${esc(bidEnd(n))} ends</div>`:''}${awNames(n).map(a=>`<div class="bnote">+ ${esc(a)}</div>`).join('')}${i.bank?'<div class="bnote">Holiday banked</div>':''}${i.poad>0?`<div class="bnote">POAD ${fmtH(i.poad)} h</div>`:''}${S.ppLen&&ppStart(n)===n?`<div class="bh">${ppLabel(n)} begins</div>`:''}${i.o&&i.o.n?`<div class="bnote">${esc(i.o.n)}</div>`:''}</div>`;
+    h+=`<div class="bd ${dayClasses(i,f,l)}" data-d="${n}" tabindex="0" role="button" aria-label="${esc(cellTitle(i))}" title="${esc(cellTitle(i))}"><div class="bn">${n-f+1}</div><div class="bt">${esc(tag)}</div>${i.segs.length?`<div class="bnote">${esc(shiftLbl(i))} ${segTxt(i.segs,true)}</div>`:''}${i.hol?`<div class="bh">${i.prem?'★ ':''}${esc(i.hol)}${i.prem?' (premium)':''}</div>`:''}${isPayday(n)?'<div class="bpp">Payday</div>':''}${bidEnd(n)?`<div class="bh">${esc(bidEnd(n))} ends</div>`:''}${awNames(n).map(a=>`<div class="bnote">+ ${esc(a)}</div>`).join('')}${i.bank?'<div class="bnote">Holiday banked</div>':''}${i.poad>0?`<div class="bnote">POAD ${fmtH(i.poad)} h</div>`:''}${S.ppLen&&ppStart(n)===n?`<div class="bh">${ppLabel(n)} begins</div>`:''}${i.o&&i.o.n?`<div class="bnote">${esc(i.o.n)}</div>`:''}</div>`;
     if(wk&&mod(wd(n)-S.weekStart,7)===6)h+=wkCell(n-6)}
   if(wk){const p=mod(wd(l)-S.weekStart,7);if(p<6){for(let i=p;i<6;i++)h+='<div></div>';h+=wkCell(l-p)}}
   return h+'</div></section>'}
@@ -1093,7 +1093,14 @@ $('cal').addEventListener('pointerdown',e=>{const c=e.target.closest('[data-d]')
   e.preventDefault();painting=true;painted=new Set();paint(+c.dataset.d)});
 window.addEventListener('pointermove',e=>{if(!painting)return;const c=cellAt(e.clientX,e.clientY);if(c)paint(+c.dataset.d)});
 window.addEventListener('pointerup',()=>{if(painting){painting=false;render()}});
-$('cal').addEventListener('keydown',e=>{const c=e.target.closest('[data-d]');if(c&&(e.key==='Enter'||e.key===' ')){e.preventDefault();openDlg(+c.dataset.d)}});
+/* keyboard: arrows move between days (up/down = a week), Enter/Space applies the brush or opens the day, Shift+arrows paint as you go */
+const focusDay=n=>{const el=$('cal').querySelector(`[data-d="${n}"]`);if(el)el.focus();return !!el};
+function keyPaint(n){painted=new Set();paint(n);render();focusDay(n)}
+$('cal').addEventListener('keydown',e=>{const c=e.target.closest('[data-d]');if(!c)return;const n=+c.dataset.d;
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();if(S.brush==='pick')openDlg(n);else if(!VIEW)keyPaint(n);return}
+  const mv={ArrowLeft:-1,ArrowRight:1,ArrowUp:-7,ArrowDown:7}[e.key];if(!mv||e.altKey||e.ctrlKey||e.metaKey)return;e.preventDefault();const t=n+mv;
+  if(e.shiftKey&&S.brush!=='pick'&&!VIEW){painted=new Set();paint(n);paint(t);render()}
+  if(!focusDay(t)&&S.view!=='bid'){step(Math.sign(mv));focusDay(t)}});
 
 /* ---------- day dialog ---------- */
 let dlgN=null,dlgT=null,dlgAw=new Set(),dlgBank=false,dlgSh=[];
