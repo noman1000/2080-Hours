@@ -419,14 +419,14 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
       <div class="row" style="margin-top:8px"><button class="btn" id="bankAdd">Add bank</button></div>
       <div class="banks" id="bankCards"></div>
     </fieldset>
-    <fieldset><legend>Add leave or a change over a date range</legend><div class="form">
+    <fieldset id="rangeBox"><legend>Add leave or a change over a date range</legend><div class="form">
       <label>From<input type="date" id="rFrom"></label>
       <label>To<input type="date" id="rTo"></label>
       <label>Type<select id="rType"></select></label>
       <label>Hours per day<input type="number" id="rHours" min="0" max="24" step="0.25" placeholder="scheduled"></label>
       <label>Note<input type="text" id="rNote" placeholder="e.g. Cancun trip"></label>
       <label class="inline"><input type="checkbox" id="rOnlyWork" checked> Only on scheduled workdays</label>
-    </div><div class="row" style="margin-top:8px"><button class="btn primary" id="rApply">Apply to range</button><span class="muted" id="rMsg"></span></div></fieldset>
+    </div><div class="row" style="margin-top:8px"><button class="btn" id="rPreview" title="See what this does to your leave balances and paychecks without changing anything">Preview</button><button class="btn primary" id="rApply">Apply to range</button><span class="muted" id="rMsg"></span></div><div id="rPrev"></div></fieldset>
     <fieldset><legend id="leaveLegend">Leave used</legend><div class="stats" id="leaveStats"></div></fieldset>
     <fieldset><legend>All edits</legend>
       <div class="row" style="margin-bottom:6px"><label class="rad"><input type="checkbox" id="eYearOnly" checked> Only this year</label><button class="btn danger" id="clearAll">Clear all edits</button></div>
@@ -893,7 +893,8 @@ function renderPattern(){
 }
 
 /* ---------- edits tab ---------- */
-function leaveYear(){const c=fromIso(S.cursor),p=ymd(c);if(S.yearMode==='custom'){const s=ymd(fromIso(S.yearStart));let a=dn(p.y,s.m,s.d);if(a>c)a=dn(p.y-1,s.m,s.d);const e=ymd(a);return{a,b:dn(e.y+1,e.m,e.d)-1}}return{a:dn(p.y,0,1),b:dn(p.y,11,31)}}
+function leaveYearOf(c){const p=ymd(c);if(S.yearMode==='custom'){const s=ymd(fromIso(S.yearStart));let a=dn(p.y,s.m,s.d);if(a>c)a=dn(p.y-1,s.m,s.d);const e=ymd(a);return{a,b:dn(e.y+1,e.m,e.d)-1}}return{a:dn(p.y,0,1),b:dn(p.y,11,31)}}
+const leaveYear=()=>leaveYearOf(fromIso(S.cursor));
 const PERS={year:'per year (all at once)',month:'per month',pp:'per pay period',day:'per day',workday:'per day worked',hour:'per hour worked'};
 const LTYPES=[['vac','Vacation'],['pto','PTO'],['sick','Sick'],['hol','Holiday off'],['flt','Floating'],['comp','Banked']];
 function bankYear(bk,a,b){const cap=bk.max===''||bk.max==null||+bk.max<=0?Infinity:+bk.max,amt=+bk.amt||0;let bal=+bk.start||0,lost=0,used=0,earned=0,cred=0,capDay=null;const pts=[];
@@ -1204,11 +1205,39 @@ $('shRows').addEventListener('click',e=>{const b=e.target.closest('[data-shdel]'
   S.patShift=S.patShift.map(x=>x===id?'':x);Object.values(S.edits).forEach(o=>{if(o.sh){o.sh=o.sh.filter(x=>x!==id);if(!o.sh.length)delete o.sh}});render()});
 
 /* ---------- edits events ---------- */
-$('rApply').onclick=()=>{const a=$('rFrom').value,b=$('rTo').value;if(!a||!b){$('rMsg').textContent='Pick both dates.';return}
-  let x=fromIso(a),y=fromIso(b);if(y<x)[x,y]=[y,x];if(y-x>800){$('rMsg').textContent='Keep the range under about two years.';return}
-  const t=$('rType').value,h=$('rHours').value,note=$('rNote').value.trim(),only=$('rOnlyWork').checked;let c=0;
-  for(let n=x;n<=y;n++){if(only&&baseH(n)<=0)continue;const o={t};if(h!=='')o.h=+h;if(note&&c===0)o.n=note;S.edits[toIso(n)]=o;c++}
-  S.useEdits=true;$('rMsg').textContent=`Added ${c} day${c===1?'':'s'} of ${TYPES[t].label}.`;render()};
+/* the edits a date range would add; shared by Apply and Preview */
+function planRange(x,y,t,h,note,only){if(y<x)[x,y]=[y,x];const ed={};let c=0;
+  for(let n=x;n<=y;n++){if(only&&baseH(n)<=0)continue;const o={t};if(h!==''&&h!=null)o.h=+h;if(note&&c===0)o.n=note;ed[toIso(n)]=o;c++}
+  return{x,y,t,ed,c}}
+function rangeForm(){const a=$('rFrom').value,b=$('rTo').value;if(!a||!b)return 'Pick both dates.';const x=fromIso(a),y=fromIso(b);
+  if(Math.abs(y-x)>800)return 'Keep the range under about two years.';return planRange(x,y,$('rType').value,$('rHours').value,$('rNote').value.trim(),$('rOnlyWork').checked)}
+$('rApply').onclick=()=>{const p=rangeForm();if(typeof p==='string'){$('rMsg').textContent=p;return}
+  Object.assign(S.edits,p.ed);S.useEdits=true;$('rPrev').innerHTML='';$('rMsg').textContent=`Added ${p.c} day${p.c===1?'':'s'} of ${TYPES[p.t].label}.`;render()};
+/* "what if": run banks and paychecks on a copy of the edits with the plan added; nothing is saved */
+function withEdits(ed,fn){const keep=S.edits;S.edits=ed;try{return fn()}finally{S.edits=keep}}
+function leavePreview(p){const after={...S.edits,...p.ed},ly=leaveYearOf(p.x),last=Math.min(p.y,ly.b);let leave=0;
+  withEdits(after,()=>{for(const k in p.ed)leave+=info(fromIso(k),true).leave});
+  const banks=S.banks.filter(b=>b.on&&b.use.includes(p.t)).map(b=>{const B=bankYear(b,ly.a,ly.b),A=withEdits(after,()=>bankYear(b,ly.a,ly.b));
+    let low=Infinity,lowDay=null;for(let n=p.x;n<=ly.b;n++){const v=A.pts[n-ly.a];if(v<low){low=v;lowDay=n}}
+    return{name:b.name,onB:B.pts[last-ly.a],onA:A.pts[last-ly.a],endB:B.end,endA:A.end,low,lowDay}});
+  const checks=[];for(let s=perStart(p.x);s<=p.y&&checks.length<26;s+=perLen()){const B=checkFor(s),A=withEdits(after,()=>checkFor(s));checks.push({s,pd:B.pd,hB:B.hours,hA:A.hours,gB:B.gross,gA:A.gross,nB:B.net,nA:A.net})}
+  return{leave,replaced:Object.keys(p.ed).filter(k=>S.edits[k]).length,banks,checks,ly,last}}
+$('rPreview').onclick=()=>{const p=rangeForm(),el=$('rPrev');if(typeof p==='string'){$('rMsg').textContent=p;el.innerHTML='';return}
+  if(!p.c){$('rMsg').textContent='No days in that range to change.';el.innerHTML='';return}
+  const r=leavePreview(p),H=v=>fmtH(Math.round(v*100)/100),arrow=(b,a,f)=>Math.abs(a-b)<0.005?f(a):`${f(b)} → <b>${f(a)}</b>`,lbl=TYPES[p.t].label;
+  let h=`<h4 style="margin:10px 0 4px">Preview: ${p.c} day${p.c===1?'':'s'} of ${esc(lbl)}, ${fmtD(p.x)} – ${fmtD(p.y)}${TYPES[p.t].leave?` · ${H(r.leave)} h of leave`:''}</h4>`;
+  if(r.replaced)h+=`<p class="muted">${r.replaced} of these days already ${r.replaced===1?'has an edit':'have edits'}, which Apply would replace.</p>`;
+  if(TYPES[p.t].leave){
+    if(!r.banks.length)h+=`<p class="muted">No leave bank that’s turned on uses ${esc(lbl)}. Turn one on above to see balances.</p>`;
+    else{h+=`<div class="tablewrap"><table><thead><tr><th>Bank</th><th>On ${fmtD(r.last)}</th><th>Lowest after</th><th>Year end (${fmtD(r.ly.b)})</th></tr></thead><tbody>`+
+      r.banks.map(b=>`<tr><td>${esc(b.name)}</td><td>${arrow(b.onB,b.onA,H)} h</td><td>${H(b.low)} h on ${fmtD(b.lowDay)}${b.low<-0.005?' <b>· below zero: more leave than you’ll have</b>':''}</td><td>${arrow(b.endB,b.endA,H)} h</td></tr>`).join('')+'</tbody></table></div>';
+      if(p.y>r.ly.b)h+=`<p class="muted">Balances only count the part through ${fmtD(r.ly.b)}.</p>`}}
+  const ch=r.checks.filter(c=>Math.abs(c.nA-c.nB)>=0.005||Math.abs(c.hA-c.hB)>=0.005);
+  h+=!ch.length?`<p>Your paychecks stay the same: this time is paid like the hours it replaces.</p>`
+    :`<div class="tablewrap"><table><thead><tr><th>Payday</th><th>Paid hours</th><th>Gross</th><th>Net</th><th>Change</th></tr></thead><tbody>`+
+      ch.map(c=>`<tr><td>${fmtD(c.pd)}</td><td>${arrow(c.hB,c.hA,H)}</td><td>${arrow(c.gB,c.gA,money)}</td><td>${arrow(c.nB,c.nA,money)}</td><td><b>${money(c.nA-c.nB)}</b></td></tr>`).join('')+'</tbody></table></div>';
+  el.innerHTML=h+'<p class="muted">Nothing has changed yet. Click Apply to range to add it.</p>';$('rMsg').textContent=''};
+$('rangeBox').addEventListener('input',()=>{$('rPrev').innerHTML=''});
 $('eYearOnly').onchange=render;
 $('bankRows').addEventListener('change',e=>{const t=e.target,d=t.dataset;
   if(d.bk!=null){const b=S.banks[+d.bk];b[d.f]=d.f==='name'||d.f==='per'?t.value:(d.f==='max'&&t.value===''?'':+t.value)}
@@ -1504,6 +1533,17 @@ async function runTests(){
     return[u.includes('DTSTART:20260105T060000\r\nDTEND:20260105T140000'),u.includes('DTSTART:20260106T060000\r\nDTEND:20260106T220000'),u.includes('DTSTART:20260107T220000\r\nDTEND:20260108T080000'),u.includes('SUMMARY:Swap in (work) 16 h · 1st + 2nd')]},[true,true,true,true]);
   fresh();
   T('Christmas 2026 shows as a premium holiday',()=>icsText(D21+4,D21+4,ICSDEF).txt.includes('SUMMARY:Christmas Day (premium)'),true);
+
+  G('Leave “what if” preview (vacation Mon Mar 2 – Fri Mar 6, 2026)');
+  const vacPlan=()=>planRange(I('2026-03-06'),I('2026-03-02'),'vac','','Trip',true);
+  payS();S.banks[0]=Object.assign(S.banks[0],{on:true,start:40,amt:4,per:'pp',max:'',use:['vac']});S.pay.pdDay=10;
+  const pv=leavePreview(vacPlan());
+  T('5 workdays, 40 h of leave, nothing replaced',()=>[vacPlan().c,pv.leave,pv.replaced],[5,40,0]);
+  T('The bank drops by 40 h on Mar 6 and at year end',()=>{const b=pv.banks[0];return[b.onB-b.onA,b.endB-b.endA]},[40,40]);
+  T('Paid leave keeps gross the same but loses $50 of per diem',()=>{const c=pv.checks.find(c=>c.nA!==c.nB);return[pv.checks.length,c.gA-c.gB,c.nA-c.nB]},[1,0,-50]);
+  T('Previewing doesn’t change your edits',()=>Object.keys(S.edits).length,0);
+  S.banks[0].start=0;S.banks[0].amt=0;
+  T('An empty bank shows its lowest point: −40 h on Mar 6',()=>{const b=leavePreview(vacPlan()).banks[0];return[b.low,toIso(b.lowDay)]},[-40,'2026-03-06']);
 
   G('Extra months around a view');
   const span=()=>{const v=shown();return[toIso(v.a),toIso(v.b)]};

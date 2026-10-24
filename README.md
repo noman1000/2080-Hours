@@ -40,6 +40,7 @@ Includes presets and customizability for rotating or fixed schedules and a paych
 - A chart for each bank showing its balance through the year, when it reaches its maximum, and hours lost to the cap.
 - Bank a holiday instead of taking holiday pay, and send POAD time to a bank.
 - Apply leave across a date range; list and remove edits.
+- Preview a date range before applying it ("what if"): each bank's balance after the time off, its lowest point (with a warning if it goes below zero) and year end, plus any paycheck that changes, such as lost per diem or premium pay.
 
 ### Paycheck
 - Hourly or salary (with optional salary OT).
