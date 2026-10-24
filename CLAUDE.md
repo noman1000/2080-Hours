@@ -4,6 +4,7 @@
 
 ## Hard rules
 - **Everything lives in one file, `index.html`.** HTML, CSS and JS are all inline. Don't add a build step, a framework, npm packages or separate files unless the owner asks. It must keep working when someone double-clicks the file offline.
+  - **Exception, hosted site only:** `manifest.webmanifest`, `sw.js` and `icons/` make the GitHub Pages site installable and offline-capable. `index.html` only links or registers them when served over http(s) (`hosted`), so a lone downloaded `index.html` never needs them. Keep the app itself in `index.html`. When you add a file the app needs offline, add it to `APP` in `sw.js` and bump `VER`.
 - **The only allowed external loads:** Google Fonts (IBM Plex Sans/Mono), and html2canvas 1.4.1 from cdnjs, loaded lazily by Export → Image. Everything else ships inline.
 - **No server, accounts, cookies or tracking.** User data stays in the browser (see State below). The README promises this, so keep it true.
 - **Don't break saved data.** Users already have state in `localStorage['shiftcal.v1']`. Any new state field needs a default/migration line near the other `if(S.x==null)S.x=…` lines so older saves keep loading. Never rename or drop existing fields.

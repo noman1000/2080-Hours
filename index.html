@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2a6f97">
 <title>2080 Hours</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
@@ -482,6 +483,9 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
     <fieldset><legend>Back up</legend><div class="row" style="margin-bottom:6px"><button class="btn primary" id="dlBtn">Save backup file</button><button class="btn" id="copyBtn">Copy backup text</button><span class="muted" id="dMsg"></span></div>
       <p class="muted" id="bakAge"></p>
       <textarea id="exportTxt" readonly aria-label="Backup text"></textarea></fieldset>
+    <fieldset id="instBox"><legend>Install as an app</legend>
+      <p style="margin-bottom:6px">From the website, 2080 Hours can be installed like an app: it gets its own icon and window, and it opens without an internet connection. <span id="instHow"></span></p>
+      <div class="row"><button class="btn primary" id="instBtn" hidden>Install 2080 Hours</button><span class="muted" id="instMsg"></span></div></fieldset>
     <fieldset><legend>Share a read-only link</legend>
       <p style="margin-bottom:6px">Makes a link that shows your calendar to anyone who opens it: workdays, shift times, time off, holidays and paydays, from a year ago onward. It leaves out your pay, notes and leave balances. They can look but can’t change anything, and their own calendar in their browser isn’t touched.</p>
       <div class="row" style="margin-bottom:6px"><label class="inline"><input type="checkbox" id="shareKinds" checked> Show what kind of time off (vacation, sick…). Untick to show those days as plain days off.</label></div>
@@ -1535,6 +1539,17 @@ async function runTests(){
   let g='';out.forEach(r=>{if(r.group!==g){g=r.group;h+=`<tr><th colspan="2" style="text-align:left;padding:10px 4px 4px;border-bottom:1px solid var(--line)">${esc(g)}</th></tr>`}
     h+=`<tr><td style="padding:3px 6px;width:52px;font-weight:700">${r.ok?'✓ pass':'✗ FAIL'}</td><td style="padding:3px 4px">${esc(r.name)}${r.ok?'':`<div style="color:var(--dim)">got ${show(r.got)}, expected ${show(r.want)}</div>`}</td></tr>`});
   m.innerHTML=h+'</table>';document.body.appendChild(m)}
+/* ---------- install as an app: manifest, icons and sw.js sit next to index.html on the website only; the downloaded file skips all of this ---------- */
+const hosted=/^https?:$/.test(location.protocol)&&!framed;
+if(hosted){[['manifest','manifest.webmanifest'],['icon','icons/icon.svg'],['apple-touch-icon','icons/icon-192.png']].forEach(([rel,href])=>{const l=document.createElement('link');l.rel=rel;l.href=href;document.head.appendChild(l)});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})}
+{let ask=null;const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone,ios=/iPhone|iPad|iPod/.test(navigator.userAgent);
+  $('instHow').textContent=standalone?'You’re using the installed app now.':!hosted?`You’re using a downloaded copy, which already works offline. To install, open ${SHAREBASE} in Chrome, Edge or Safari.`
+    :ios?'On iPhone or iPad: tap Share, then Add to Home Screen. Note: the home-screen app keeps its own copy of your data, separate from Safari, so move it over with a backup file.'
+    :'In Chrome or Edge, use the button below or the install icon in the address bar. The installed app shares this browser’s data, so your schedule is already there.';
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();ask=e;$('instBtn').hidden=false});
+  $('instBtn').onclick=async()=>{if(!ask)return;ask.prompt();const r=await ask.userChoice;ask=null;$('instBtn').hidden=true;$('instMsg').textContent=r.outcome==='accepted'?'Installed. Look for 2080 Hours with your other apps.':''};
+  addEventListener('appinstalled',()=>{$('instBtn').hidden=true;$('instMsg').textContent='Installed. Look for 2080 Hours with your other apps.'})}
 addEventListener('hashchange',()=>{if(location.hash==='#tests'||$('tests')||VIEW||location.hash.startsWith('#view='))location.reload()});
 if(location.hash==='#tests')runTests();else if(VIEW)openShared();else render();
 })();

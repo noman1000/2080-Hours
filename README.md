@@ -12,6 +12,7 @@ Includes presets and customizability for rotating or fixed schedules and a paych
 
 **Use it online:** https://noman1000.github.io/2080-Hours/
 **Use it offline:** download `index.html` and double-click it.
+**Install it as an app:** open the website in Chrome or Edge and click the install icon in the address bar (or **Save / load → Install 2080 Hours**). On iPhone or iPad, tap Share → Add to Home Screen. The installed app opens without internet. On iPhone and iPad the home-screen app keeps its own copy of your data, so move it over with a backup file.
 
 ## What it does
 
@@ -61,7 +62,7 @@ Classic (old-school teal), Modern (follow system, light or dark) and Night Shift
 - To back up or move your setup, use **Save / load → Save backup file** (or **Copy backup text**), then **Load** it on the other side. The backup is the same JSON record in a plain text file.
 - **Share a read-only link** (Save / load) packs your calendar into the link itself: pattern, shifts, time off, holidays and paydays from a year ago onward, without pay, notes or leave balances. Nothing is uploaded. The part after `#` never reaches the web server, but anyone who has the link can read it, so only send it to people you'd show your calendar to. Opening a shared link never saves anything or touches the viewer's own calendar.
 
-**Outside connections:** the app makes only two kinds of web requests. The page loads the IBM Plex fonts (used by the Modern and Night Shift looks) from Google Fonts. **Export → Image (PNG)** loads the html2canvas library from cdnjs the first time you use it. Neither one sends your schedule data.
+**Outside connections:** the app makes only two kinds of web requests. The page loads the IBM Plex fonts (used by the Modern and Night Shift looks) from Google Fonts. **Export → Image (PNG)** loads the html2canvas library from cdnjs the first time you use it. Neither one sends your schedule data. On the website, a small offline helper (`sw.js`) saves a copy of the app, fonts and image library so it opens without internet. It only stores those files and never sees your schedule.
 
 Pay figures are estimates. Tax rates are flat percentages you enter, not real withholding tables.
 
