@@ -117,6 +117,10 @@ label.rad{display:inline-flex;align-items:center;gap:4px;cursor:pointer;font-wei
 .grid.q{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
 .mon{background:var(--panel);border:var(--bw) solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);border-radius:var(--r);padding:4px 6px 6px}
 .mon.extra{border:max(var(--bw),2px) dashed var(--dim)}
+.viewbar{margin:8px 8px 0;padding:6px 8px;background:var(--panel);border:1px solid var(--line)}
+.viewonly #t-pat,.viewonly #t-edits,.viewonly #t-pay,.viewonly #t-data,.viewonly .hist,.viewonly #brushBox,.viewonly #ppDet,.viewonly #sPP,.viewonly #sBak,.viewonly #saveWarn,
+.viewonly #cycBack,.viewonly #cycFwd,.viewonly #cycToday,.viewonly #bidAdd,.viewonly #bidDel,.viewonly #csvPP{display:none!important}
+.viewonly .d,.viewonly .bd{cursor:default}
 :root:not(.skin-classic) .mon{border-color:var(--line)}
 .mon h3{margin:0 0 2px;font-size:14px;color:var(--legend);display:flex;justify-content:space-between;gap:8px;font-weight:700}
 .mon h3 b{font-variant-numeric:tabular-nums}
@@ -274,7 +278,7 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
   .stat{gap:5px;font-size:9px;line-height:1.15}
   .stat b{min-width:40px;font-size:11px;padding:1px 4px}
   details:not([open]){display:none}
-  .legend{font-size:9px;gap:2px 10px}
+  .legend{font-size:9px;gap:6px 10px;line-height:1.3}
   .sw{width:9px;height:9px}
   #printHead h2{font-size:13px!important}
   .bd{min-height:78px}
@@ -289,6 +293,7 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
 <div class="window">
   <div class="titlebar"><span class="ttl">2080 Hours</span><span class="sub" id="schedName"></span><div class="winbtns deco" aria-hidden="true"><span>_</span><span>□</span><span>×</span></div></div>
   <div class="savewarn noprint" id="saveWarn" role="alert" hidden>Changes aren’t being saved in this browser (storage is full or blocked, as in a private window). <button class="lnk" id="warnGo">Save a backup file</button> to keep them.</div>
+  <div class="viewbar noprint" id="viewBar" role="status" hidden></div>
   <div class="tabrow noprint">
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="cal" id="t-cal">Calendar</button>
@@ -335,7 +340,7 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
         <option value="classic">Classic (teal)</option><option value="modern">Modern — follow system</option><option value="light">Modern — light</option><option value="dark">Modern — dark</option><option value="night">Night shift</option></select><button class="btn" id="styBtn">Day colors &amp; text…</button></div></fieldset>
     </div>
     <div class="notice noprint" id="printNote" hidden></div>
-    <fieldset class="noprint"><legend>Click a day to edit it, or pick a brush and click/drag across days</legend><div class="brushes" id="brushes"></div></fieldset>
+    <fieldset class="noprint" id="brushBox"><legend>Click a day to edit it, or pick a brush and click/drag across days</legend><div class="brushes" id="brushes"></div></fieldset>
     <div class="printonly" id="printHead"></div>
     <div id="cal"></div>
     <fieldset><legend id="statsLegend">Totals</legend><div class="stats" id="stats"></div></fieldset>
@@ -477,6 +482,12 @@ textarea{width:100%;min-height:120px;font-family:var(--mono);font-size:12px}
     <fieldset><legend>Back up</legend><div class="row" style="margin-bottom:6px"><button class="btn primary" id="dlBtn">Save backup file</button><button class="btn" id="copyBtn">Copy backup text</button><span class="muted" id="dMsg"></span></div>
       <p class="muted" id="bakAge"></p>
       <textarea id="exportTxt" readonly aria-label="Backup text"></textarea></fieldset>
+    <fieldset><legend>Share a read-only link</legend>
+      <p style="margin-bottom:6px">Makes a link that shows your calendar to anyone who opens it: workdays, shift times, time off, holidays and paydays, from a year ago onward. It leaves out your pay, notes and leave balances. They can look but can’t change anything, and their own calendar in their browser isn’t touched.</p>
+      <div class="row" style="margin-bottom:6px"><label class="inline"><input type="checkbox" id="shareKinds" checked> Show what kind of time off (vacation, sick…). Untick to show those days as plain days off.</label></div>
+      <div class="row" style="margin-bottom:6px"><button class="btn primary" id="shareMake">Make link</button><button class="btn" id="shareCopy" disabled>Copy link</button><span class="muted" id="shareMsg"></span></div>
+      <input type="text" id="shareOut" readonly aria-label="Share link" placeholder="Your link appears here" style="width:100%">
+      <p class="muted" style="margin-top:6px">Your schedule is packed into the link itself, so it isn’t stored on any server. Anyone who gets the link can see it, and chat apps may keep a copy. The link is a snapshot: after you change your schedule, make a new one.</p></fieldset>
     <fieldset><legend>Restore</legend><div class="row" style="margin-bottom:6px"><input type="file" id="fileIn" accept=".json,application/json"><button class="btn" id="pasteLoad">Load pasted text</button><span class="muted" id="iMsg"></span></div>
       <textarea id="importTxt" placeholder="Paste backup text here" aria-label="Backup text to load"></textarea></fieldset>
     <fieldset><legend>Start over</legend><div class="row"><button class="btn danger" id="resetBtn">Reset to the sample schedule</button></div></fieldset>
@@ -662,7 +673,10 @@ function isPayday(n){if(wd(n)!==S.payDow)return false;
 /* ---------- saving & undo ---------- */
 const UIKEYS=new Set(['view','cursor','tab','brush','stubDay','bidIdx','useEdits','yearMode','lastBackup','padB','padA']);
 const undoS=[],redoS=[];let histKey=null,histFull=null,histT=0;
+/* a #view= link shows someone else's shared calendar: nothing is ever written to this browser's storage */
+const VIEW=location.hash.startsWith('#view=');
 function save(){
+  if(VIEW)return;
   const full=JSON.stringify(S),key=JSON.stringify(S,function(k,v){return this===S&&UIKEYS.has(k)?undefined:v});
   if(histKey!==null&&key!==histKey){if(Date.now()-histT>1000){undoS.push(histFull);if(undoS.length>100)undoS.shift()}redoS.length=0;histT=Date.now()}
   histKey=key;histFull=full;
@@ -1070,7 +1084,7 @@ function paint(n){if(painted.has(n))return;painted.add(n);const k=toIso(n);
   if(!S.useEdits)S.useEdits=true;
   renderCal()}
 function cellAt(x,y){const el=document.elementFromPoint(x,y);return el&&el.closest('[data-d]')}
-$('cal').addEventListener('pointerdown',e=>{const c=e.target.closest('[data-d]');if(!c)return;
+$('cal').addEventListener('pointerdown',e=>{const c=e.target.closest('[data-d]');if(!c||VIEW)return;
   if(S.brush==='pick'){openDlg(+c.dataset.d);return}
   e.preventDefault();painting=true;painted=new Set();paint(+c.dataset.d)});
 window.addEventListener('pointermove',e=>{if(!painting)return;const c=cellAt(e.clientX,e.clientY);if(c)paint(+c.dataset.d)});
@@ -1079,7 +1093,7 @@ $('cal').addEventListener('keydown',e=>{const c=e.target.closest('[data-d]');if(
 
 /* ---------- day dialog ---------- */
 let dlgN=null,dlgT=null,dlgAw=new Set(),dlgBank=false,dlgSh=[];
-function openDlg(n){dlgN=n;const i=info(n,false),o=S.edits[toIso(n)];dlgT=o?o.t:null;dlgSh=o&&o.sh?o.sh.slice():[];
+function openDlg(n){if(VIEW)return;dlgN=n;const i=info(n,false),o=S.edits[toIso(n)];dlgT=o?o.t:null;dlgSh=o&&o.sh?o.sh.slice():[];
   $('dTitle').textContent=fmtLong(n);
   $('dInfo').textContent=`Pattern: ${i.sched?`workday, ${fmtH(i.base)} h`:'day off (RDO)'} · day ${mod(n-anchorN(),S.pattern.length)+1} of ${S.pattern.length}${i.hol?' · '+i.hol:''}`;
   $('dHours').value=o&&o.h!=null?o.h:'';$('dNote').value=o&&o.n||'';
@@ -1291,6 +1305,28 @@ $('icsBtn').onclick=()=>{const r=shown(),t=ymd(TODAY),yr={a:TODAY,b:dn(t.y+1,t.m
     xName=`${slug(S.name)}-${icsSpan==='year'?'next-12-months':slug(r.label)}.ics`;
     $('xMsg').textContent=`${x.count} events, ${fmtD(p.a)} – ${fmtD(p.b)}${S.useEdits?'':'. Pattern only: your edits are left out (switch to Actual to include them)'}.`};
   $('xBody').onchange=upd;upd()};
+/* ---------- share a read-only link: calendar settings + edits (no pay, notes or banks) packed after #view= ---------- */
+const SHAREKEYS=['name','anchor','hours','pattern','patShift','shifts','weekly','payWeekStart','ppLen','ppAnchor','payDow','payWhen','holidays','holObs','customHols','fedOff','fedPrem','showHol','showPrem','longMin','shortMax','styles','brushOff','bids','bidIdx','yearMode','yearStart'];
+const SHAREBASE='https://noman1000.github.io/2080-Hours/';
+function sharePayload(kinds){const o={},from=toIso(TODAY-366);SHAREKEYS.forEach(k=>{if(S[k]!==undefined)o[k]=S[k]});o.edits={};
+  for(const[d,e]of Object.entries(S.edits)){const t=TYPES[e.t];if(d<from||!t||(e.t==='note'&&!e.sh))continue;
+    const hide=!kinds&&t.leave,x={t:hide?'rdo':e.t};if(!hide&&e.h!=null&&e.h!=='')x.h=e.h;if(e.sh)x.sh=e.sh;o.edits[d]=x}
+  return o}
+const b64u={enc:u=>{let s='';for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode(...u.subarray(i,i+8192));return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')},
+  dec:s=>Uint8Array.from(atob(s.replace(/-/g,'+').replace(/_/g,'/')),c=>c.charCodeAt(0))};
+const zip=(u,how)=>new Response(new Blob([u]).stream().pipeThrough(how)).arrayBuffer().then(b=>new Uint8Array(b));
+/* 'z' = deflate-compressed JSON, 'j' = plain JSON for browsers without CompressionStream */
+async function pack(o){const raw=utf8.encode(JSON.stringify(o));return window.CompressionStream?'z'+b64u.enc(await zip(raw,new CompressionStream('deflate-raw'))):'j'+b64u.enc(raw)}
+async function unpack(s){let u=b64u.dec(s.slice(1));if(s[0]==='z')u=await zip(u,new DecompressionStream('deflate-raw'));else if(s[0]!=='j')throw new Error('unknown format');return JSON.parse(new TextDecoder().decode(u))}
+$('shareMake').onclick=async()=>{const base=/^https?:/.test(location.protocol)?location.href.split('#')[0]:SHAREBASE,url=base+'#view='+await pack(sharePayload($('shareKinds').checked));
+  $('shareOut').value=url;$('shareCopy').disabled=false;
+  $('shareMsg').textContent=`Link made (${url.length.toLocaleString()} characters).${url.length>8000?' That’s long, and some chat apps cut long links. Email or a notes app is safer.':''}`};
+$('shareCopy').onclick=()=>{navigator.clipboard.writeText($('shareOut').value).then(()=>$('shareMsg').textContent='Copied.',()=>{$('shareOut').focus();$('shareOut').select();$('shareMsg').textContent='Press Ctrl+C to copy the selected link.'})};
+async function openShared(){const bar=$('viewBar'),own=location.href.split('#')[0];document.documentElement.classList.add('viewonly');bar.hidden=false;
+  try{const o=await unpack(location.hash.slice(6));S=sampleState();upgrade();Object.assign(S,o,{tab:'cal',useEdits:true,cursor:toIso(TODAY)});upgrade();
+    bar.innerHTML=`<b>Read-only view</b> of “${esc(S.name)}”, shared from 2080 Hours. Nothing here is saved, and your own calendar in this browser isn’t changed. <a href="${esc(own)}">Open my own calendar</a>`;render()}
+  catch(e){bar.innerHTML=`This share link is damaged or incomplete, so it can’t be shown. Ask for the link again, and copy all of it. <a href="${esc(own)}">Open my own calendar</a>`;
+    document.querySelectorAll('.page,.tabrow,.statusbar').forEach(el=>{el.hidden=true})}}
 function loadH2C(){return window.html2canvas?Promise.resolve():new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc)})}
 $('imgBtn').onclick=async()=>{const b=$('imgBtn');b.disabled=true;b.textContent='Making image…';
   try{await loadH2C();document.body.classList.add('snap');const el=$('p-cal');
@@ -1311,12 +1347,12 @@ armed($('styResetAll'),()=>{S.styles={};S.brushOff=[];applyUserStyles();save();r
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('sScrim').hidden){$('sScrim').hidden=true;render()}});
 
 /* ---------- self-checks: open index.html#tests. Runs on throwaway copies of the state and never saves ---------- */
-function runTests(){
+async function runTests(){
   const keep=S,out=[],I=fromIso,hn=s=>holName(I(s));let group='';
   const G=g=>{group=g};
-  const T=(name,fn,want)=>{let got;try{got=fn()}catch(e){got='Error: '+e.message}
-    const ok=typeof got==='number'&&typeof want==='number'?Math.abs(got-want)<0.005:JSON.stringify(got)===JSON.stringify(want);
-    out.push({group,name,ok,got,want})};
+  const rec=(name,got,want)=>out.push({group,name,got,want,ok:typeof got==='number'&&typeof want==='number'?Math.abs(got-want)<0.005:JSON.stringify(got)===JSON.stringify(want)});
+  const T=(name,fn,want)=>{let got;try{got=fn()}catch(e){got='Error: '+e.message}rec(name,got,want)};
+  const TA=async(name,fn,want)=>{let got;try{got=await fn()}catch(e){got='Error: '+e.message}rec(name,got,want)};
   const fresh=o=>{S=sampleState();upgrade();Object.assign(S,o||{});for(const k in holCache)delete holCache[k]};
   const preset=(k,o)=>{const p=PRESETS[k];fresh(Object.assign({name:p.name,anchor:p.anchor,hours:p.hours,pattern:p.pattern.slice(),preset:k,weekly:['r410','r58','f58','f410'].includes(k)},o));alignWeekly()};
   const payS=(o,ed)=>{fresh(o);S.pay.wage=20;S.pay.deds=[];Object.assign(S.edits,ed||{})};
@@ -1476,6 +1512,18 @@ function runTests(){
   T('Upgrading twice changes nothing',()=>{fresh();const a=JSON.stringify(S);upgrade();return JSON.stringify(S)===a},true);
   T('Data from a newer version keeps its version number',()=>{S={pattern:[8],anchor:'2026-01-04',v:DATA_V+5};upgrade();return S.v},DATA_V+5);
 
+  G('Share links');
+  fresh({edits:{'2026-10-05':{t:'vac',n:'Doctor visit',h:6},'2026-10-06':{t:'ot',aw:['lunch'],poad:'full'},'2026-10-07':{t:'note',n:'Private'},'2024-01-08':{t:'sick'},'2026-10-08':{t:'note',sh:['a']}}});
+  S.pay.wage=99;S.banks[0].on=true;
+  const sp=sharePayload(true),sj=JSON.stringify(sp);
+  T('Leaves out pay, leave banks and notes',()=>['pay','banks','lastBackup'].some(k=>k in sp)||/Doctor|Private|"wage"/.test(sj),false);
+  T('Keeps time off and overtime, drops note-only days and edits from over a year ago',()=>sp.edits,{'2026-10-05':{t:'vac',h:6},'2026-10-06':{t:'ot'},'2026-10-08':{t:'note',sh:['a']}});
+  T('“Plain days off” turns vacation into a day off and hides its hours',()=>sharePayload(false).edits['2026-10-05'],{t:'rdo'});
+  const enc=await pack(sp);
+  await TA('A link unpacks to exactly what was packed',async()=>JSON.stringify(await unpack(enc))===sj,true);
+  await TA('Plain (uncompressed) links unpack too',async()=>JSON.stringify(await unpack('j'+b64u.enc(utf8.encode(sj))))===sj,true);
+  await TA('A damaged link is refused',()=>unpack(enc.slice(0,enc.length>>1)).then(()=>'accepted',()=>'refused'),'refused');
+
   S=keep;for(const k in holCache)delete holCache[k];
   const bad=out.filter(r=>!r.ok),show=v=>esc(typeof v==='string'?v:JSON.stringify(v));
   document.title=`Self-checks: ${out.length-bad.length} of ${out.length} passed`;
@@ -1487,8 +1535,8 @@ function runTests(){
   let g='';out.forEach(r=>{if(r.group!==g){g=r.group;h+=`<tr><th colspan="2" style="text-align:left;padding:10px 4px 4px;border-bottom:1px solid var(--line)">${esc(g)}</th></tr>`}
     h+=`<tr><td style="padding:3px 6px;width:52px;font-weight:700">${r.ok?'✓ pass':'✗ FAIL'}</td><td style="padding:3px 4px">${esc(r.name)}${r.ok?'':`<div style="color:var(--dim)">got ${show(r.got)}, expected ${show(r.want)}</div>`}</td></tr>`});
   m.innerHTML=h+'</table>';document.body.appendChild(m)}
-addEventListener('hashchange',()=>{if(location.hash==='#tests'||$('tests'))location.reload()});
-if(location.hash==='#tests')runTests();else render();
+addEventListener('hashchange',()=>{if(location.hash==='#tests'||$('tests')||VIEW||location.hash.startsWith('#view='))location.reload()});
+if(location.hash==='#tests')runTests();else if(VIEW)openShared();else render();
 })();
 </script>
 

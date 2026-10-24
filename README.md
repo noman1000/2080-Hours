@@ -59,6 +59,7 @@ Classic (old-school teal), Modern (follow system, light or dark) and Night Shift
 - Each browser and each address keeps its own copy. The GitHub site, a downloaded `index.html`, and a different browser or computer all start separately.
 - Clearing your browser's site data or cookies for the page deletes it, and private/incognito windows don't keep it after you close them.
 - To back up or move your setup, use **Save / load → Save backup file** (or **Copy backup text**), then **Load** it on the other side. The backup is the same JSON record in a plain text file.
+- **Share a read-only link** (Save / load) packs your calendar into the link itself: pattern, shifts, time off, holidays and paydays from a year ago onward, without pay, notes or leave balances. Nothing is uploaded. The part after `#` never reaches the web server, but anyone who has the link can read it, so only send it to people you'd show your calendar to. Opening a shared link never saves anything or touches the viewer's own calendar.
 
 **Outside connections:** the app makes only two kinds of web requests. The page loads the IBM Plex fonts (used by the Modern and Night Shift looks) from Google Fonts. **Export → Image (PNG)** loads the html2canvas library from cdnjs the first time you use it. Neither one sends your schedule data.
 

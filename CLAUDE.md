@@ -9,6 +9,7 @@
 - **Don't break saved data.** Users already have state in `localStorage['shiftcal.v1']`. Any new state field needs a default/migration line near the other `if(S.x==null)S.x=…` lines so older saves keep loading. Never rename or drop existing fields.
 - **Keep `[hidden]{display:none!important}` in the CSS.** Dialogs and tabs toggle with `el.hidden`, and without that rule they never hide. That bug happened once already.
 - After editing, check the script parses. One quick way: extract the `<script>` block to a temp file and run `node --check` on it. Then open `index.html` in a browser.
+- **Share links (`#view=…`) are read-only.** `VIEW` makes `save()` return early so a viewer's own `localStorage` is never overwritten. Never add another storage write that skips that guard. `sharePayload()` decides what leaves the browser: keep pay, notes, banks and awarded pay out of it, and update the README's "Your data" section if that changes.
 - **Run the self-checks before committing:** open `index.html#tests` (headless: `msedge --headless=new --dump-dom "file:///…/index.html#tests"` and read the `<title>`, e.g. "Self-checks: 66 of 66 passed"). They live in `runTests()` at the end of the script, work on throwaway copies of `S` and never save. When you fix a date, holiday, rotation, pay or bank bug, add a check that fails without the fix.
 - Commit messages: short, imperative, describing the user-visible change. The owner also edits `README.md` on GitHub directly, so always pull before committing.
 
