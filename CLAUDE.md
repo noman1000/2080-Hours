@@ -1,6 +1,6 @@
 # 2080 Hours: notes for Claude Code
 
-2080 Hours is a shift calendar and paycheck estimator for people on rotating or fixed schedules. Live site: https://noman1000.github.io/2080-hours/ (GitHub Pages, deployed from `main`, root folder).
+2080 Hours is a shift calendar and paycheck estimator for people on rotating or fixed schedules. Live site: https://noman1000.github.io/2080-Hours/ (GitHub Pages, deployed from `main`, root folder).
 
 ## Hard rules
 - **Everything lives in one file, `index.html`.** HTML, CSS and JS are all inline. Don't add a build step, a framework, npm packages or separate files unless the owner asks. It must keep working when someone double-clicks the file offline.
